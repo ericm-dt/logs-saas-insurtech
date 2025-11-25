@@ -142,6 +142,76 @@ services:
       - quotes-service
     restart: unless-stopped
 
+  # Prisma Studio - Auth DB
+  prisma-studio-auth:
+    image: node:24-alpine
+    working_dir: /app
+    command: sh -c "npm install -g prisma && npx prisma studio --port 5555 --browser none --url postgresql://postgres:postgres@postgres:5432/auth_db"
+    ports:
+      - "5555:5555"
+    volumes:
+      - ./services/auth-service/prisma:/app/prisma
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Prisma Studio - Customer DB
+  prisma-studio-customer:
+    image: node:24-alpine
+    working_dir: /app
+    command: sh -c "npm install -g prisma && npx prisma studio --port 5556 --browser none --url postgresql://postgres:postgres@postgres:5432/customer_db"
+    ports:
+      - "5556:5556"
+    volumes:
+      - ./services/customer-service/prisma:/app/prisma
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Prisma Studio - Policy DB
+  prisma-studio-policy:
+    image: node:24-alpine
+    working_dir: /app
+    command: sh -c "npm install -g prisma && npx prisma studio --port 5557 --browser none --url postgresql://postgres:postgres@postgres:5432/policy_db"
+    ports:
+      - "5557:5557"
+    volumes:
+      - ./services/policy-service/prisma:/app/prisma
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Prisma Studio - Claims DB
+  prisma-studio-claims:
+    image: node:24-alpine
+    working_dir: /app
+    command: sh -c "npm install -g prisma && npx prisma studio --port 5558 --browser none --url postgresql://postgres:postgres@postgres:5432/claims_db"
+    ports:
+      - "5558:5558"
+    volumes:
+      - ./services/claims-service/prisma:/app/prisma
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Prisma Studio - Quotes DB
+  prisma-studio-quotes:
+    image: node:24-alpine
+    working_dir: /app
+    command: sh -c "npm install -g prisma && npx prisma studio --port 5559 --browser none --url postgresql://postgres:postgres@postgres:5432/quotes_db"
+    ports:
+      - "5559:5559"
+    volumes:
+      - ./services/quotes-service/prisma:/app/prisma
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
 

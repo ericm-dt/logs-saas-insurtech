@@ -14,6 +14,7 @@
     "dev:claims": "cd services/claims-service && npm run dev",
     "dev:quotes": "cd services/quotes-service && npm run dev",
     "dev:gateway": "cd services/api-gateway && npm run dev",
+    "studio": "cd services/auth-service && npx prisma studio",
     "docker:up": "docker-compose up --build",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
