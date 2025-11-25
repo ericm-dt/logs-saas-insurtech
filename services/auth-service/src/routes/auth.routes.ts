@@ -8,8 +8,9 @@ router.post('/register', async (req: Request, res: Response) => {
     const { email, password, firstName, lastName, role } = req.body;
     const result = await authService.register(email, password, firstName, lastName, role);
     res.status(201).json({ success: true, data: result });
-  } catch (error: any) {
-    res.status(400).json({ success: false, message: error.message });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Registration failed';
+    res.status(400).json({ success: false, message });
   }
 });
 
@@ -18,8 +19,9 @@ router.post('/login', async (req: Request, res: Response) => {
     const { email, password } = req.body;
     const result = await authService.login(email, password);
     res.json({ success: true, data: result });
-  } catch (error: any) {
-    res.status(401).json({ success: false, message: error.message });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Login failed';
+    res.status(401).json({ success: false, message });
   }
 });
 
@@ -28,7 +30,7 @@ router.post('/verify', async (req: Request, res: Response) => {
     const { token } = req.body;
     const payload = authService.verifyToken(token);
     res.json({ success: true, data: payload });
-  } catch (error: any) {
+  } catch (error) {
     res.status(401).json({ success: false, message: 'Invalid token' });
   }
 });

@@ -1,6 +1,6 @@
-import { Router } from 'express';
-import { body, param } from 'express-validator';
-import { PrismaClient } from '@prisma/client';
+import { Router, Request, Response, NextFunction } from 'express';
+import { body, param, ValidationChain } from 'express-validator';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import axios from 'axios';
 
@@ -10,9 +10,9 @@ const prisma = new PrismaClient();
 const CUSTOMER_SERVICE_URL = process.env.CUSTOMER_SERVICE_URL || 'http://localhost:3002';
 
 // Validation middleware
-const validate = (validations: any[]) => {
-  return async (req: any, res: any, next: any) => {
-    for (let validation of validations) {
+const validate = (validations: ValidationChain[]) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    for (const validation of validations) {
       const result = await validation.run(req);
       if (!result.isEmpty()) {
         return res.status(400).json({
@@ -149,8 +149,8 @@ router.post(
         data: quote,
         message: `Quote created with calculated premium: $${premium}`
       });
-    } catch (error: any) {
-      if (error.code === 'P2002') {
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         return res.status(400).json({
           success: false,
           message: 'Quote number already exists'
@@ -185,8 +185,8 @@ router.put(
         success: true,
         data: quote
       });
-    } catch (error: any) {
-      if (error.code === 'P2025') {
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
         return res.status(404).json({
           success: false,
           message: 'Quote not found'
@@ -211,8 +211,8 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
       success: true,
       message: 'Quote deleted successfully'
     });
-  } catch (error: any) {
-    if (error.code === 'P2025') {
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
       return res.status(404).json({
         success: false,
         message: 'Quote not found'
@@ -223,9 +223,7 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
       message: 'Failed to delete quote'
     });
   }
-});
-
-// Expire old quotes (utility endpoint)
+});// Expire old quotes (utility endpoint)
 router.post('/expire-old', authenticate, async (req: AuthRequest, res) => {
   try {
     const now = new Date();

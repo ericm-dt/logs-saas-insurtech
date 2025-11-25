@@ -23,7 +23,7 @@ export class AuthService {
         password: hashedPassword,
         firstName,
         lastName,
-        role: role as any,
+        role,
       },
     });
 

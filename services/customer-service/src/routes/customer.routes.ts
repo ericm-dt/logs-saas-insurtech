@@ -24,8 +24,9 @@ router.post('/', async (req: Request, res: Response) => {
     });
 
     res.status(201).json({ success: true, data: customer });
-  } catch (error: any) {
-    res.status(400).json({ success: false, message: error.message });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to create customer';
+    res.status(400).json({ success: false, message });
   }
 });
 
@@ -33,8 +34,9 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const customers = await prisma.customer.findMany();
     res.json({ success: true, data: customers });
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to fetch customers';
+    res.status(500).json({ success: false, message });
   }
 });
 
@@ -49,8 +51,9 @@ router.get('/:id', async (req: Request, res: Response) => {
     }
 
     res.json({ success: true, data: customer });
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to fetch customer';
+    res.status(500).json({ success: false, message });
   }
 });
 
@@ -62,8 +65,9 @@ router.put('/:id', async (req: Request, res: Response) => {
     });
 
     res.json({ success: true, data: customer });
-  } catch (error: any) {
-    res.status(400).json({ success: false, message: error.message });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update customer';
+    res.status(400).json({ success: false, message });
   }
 });
 
@@ -74,8 +78,9 @@ router.delete('/:id', async (req: Request, res: Response) => {
     });
 
     res.json({ success: true, message: 'Customer deleted' });
-  } catch (error: any) {
-    res.status(400).json({ success: false, message: error.message });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to delete customer';
+    res.status(400).json({ success: false, message });
   }
 });
 
