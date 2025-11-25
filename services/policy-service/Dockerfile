@@ -22,6 +22,9 @@ RUN npm run build
 # Production stage
 FROM node:24-alpine
 
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
+
 WORKDIR /app
 
 # Copy package files
@@ -39,5 +42,5 @@ COPY --from=builder /app/dist ./dist
 
 EXPOSE 3003
 
-# Run migrations and start
-CMD npx prisma migrate deploy && node dist/server.js
+# Push schema and start (dev mode - no migrations needed)
+CMD npx prisma db push --accept-data-loss && node dist/server.js

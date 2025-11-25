@@ -1,5 +1,8 @@
 FROM node:24-alpine
 
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
+
 WORKDIR /app
 
 # Copy package files
@@ -21,5 +24,5 @@ RUN npm run build
 # Expose port
 EXPOSE 3002
 
-# Run migrations and start
-CMD npx prisma migrate deploy && npm start
+# Push schema and start (dev mode - no migrations needed)
+CMD npx prisma db push --accept-data-loss && npm start
