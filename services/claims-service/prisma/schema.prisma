@@ -1,0 +1,36 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ClaimStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  DENIED
+  PAID
+}
+
+model Claim {
+  id              String      @id @default(uuid())
+  customerId      String      // Reference to customer in customer-service
+  policyId        String      // Reference to policy in policy-service
+  claimNumber     String      @unique
+  status          ClaimStatus @default(SUBMITTED)
+  incidentDate    DateTime
+  description     String
+  claimAmount     Decimal     @db.Decimal(10, 2)
+  approvedAmount  Decimal?    @db.Decimal(10, 2)
+  denialReason    String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([customerId])
+  @@index([policyId])
+  @@index([claimNumber])
+  @@index([status])
+}

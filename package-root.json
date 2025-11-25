@@ -1,0 +1,22 @@
+{
+  "name": "insuretech-microservices",
+  "version": "1.0.0",
+  "description": "InsureTech SaaS Microservices Platform",
+  "private": true,
+  "scripts": {
+    "install:all": "npm run install:shared && npm run install:services && npm run install:gateway",
+    "install:shared": "cd services/shared && npm install",
+    "install:services": "cd services/auth-service && npm install && cd ../customer-service && npm install",
+    "install:gateway": "cd services/api-gateway && npm install",
+    "build:shared": "cd services/shared && npm run build",
+    "dev:auth": "cd services/auth-service && npm run dev",
+    "dev:customer": "cd services/customer-service && npm run dev",
+    "dev:gateway": "cd services/api-gateway && npm run dev",
+    "docker:up": "docker-compose up --build",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
+  },
+  "keywords": ["microservices", "insuretech", "saas", "api", "typescript", "express", "postgresql"],
+  "author": "",
+  "license": "MIT"
+}

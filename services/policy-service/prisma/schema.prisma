@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PolicyType {
+  AUTO
+  HOME
+  LIFE
+  HEALTH
+  BUSINESS
+}
+
+enum PolicyStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PENDING
+}
+
+model Policy {
+  id            String       @id @default(uuid())
+  customerId    String       // Reference to customer in customer-service
+  policyNumber  String       @unique
+  type          PolicyType
+  status        PolicyStatus @default(PENDING)
+  startDate     DateTime
+  endDate       DateTime
+  premium       Decimal      @db.Decimal(10, 2)
+  coverageAmount Decimal     @db.Decimal(12, 2)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([customerId])
+  @@index([policyNumber])
+  @@index([status])
+}
