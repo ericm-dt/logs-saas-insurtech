@@ -1,0 +1,145 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  AGENT
+  CUSTOMER
+}
+
+enum PolicyType {
+  AUTO
+  HOME
+  LIFE
+  HEALTH
+  BUSINESS
+}
+
+enum PolicyStatus {
+  ACTIVE
+  PENDING
+  CANCELLED
+  EXPIRED
+}
+
+enum ClaimStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  DENIED
+  PAID
+}
+
+enum QuoteStatus {
+  DRAFT
+  ACTIVE
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+model User {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  password       String
+  firstName      String
+  lastName       String
+  role           UserRole @default(CUSTOMER)
+  organizationId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Customer {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  firstName   String
+  lastName    String
+  dateOfBirth DateTime
+  phone       String
+  street      String
+  city        String
+  state       String
+  zipCode     String
+  country     String   @default("USA")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  policies Policy[]
+  claims   Claim[]
+  quotes   Quote[]
+
+  @@map("customers")
+}
+
+model Policy {
+  id           String       @id @default(uuid())
+  policyNumber String       @unique
+  customerId   String
+  type         PolicyType
+  status       PolicyStatus @default(PENDING)
+  premium      Float
+  coverage     Float
+  startDate    DateTime
+  endDate      DateTime
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  claims   Claim[]
+
+  @@index([customerId])
+  @@index([policyNumber])
+  @@map("policies")
+}
+
+model Claim {
+  id             String      @id @default(uuid())
+  claimNumber    String      @unique
+  policyId       String
+  customerId     String
+  type           String
+  status         ClaimStatus @default(SUBMITTED)
+  amount         Float
+  description    String      @db.Text
+  dateOfIncident DateTime
+  dateReported   DateTime
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  policy   Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([policyId])
+  @@index([customerId])
+  @@index([claimNumber])
+  @@map("claims")
+}
+
+model Quote {
+  id               String      @id @default(uuid())
+  customerId       String
+  type             PolicyType
+  coverage         Float
+  estimatedPremium Float
+  status           QuoteStatus @default(ACTIVE)
+  expiresAt        DateTime
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("quotes")
+}
