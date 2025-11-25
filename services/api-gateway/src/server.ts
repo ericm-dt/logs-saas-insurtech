@@ -5,13 +5,16 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { createProxyMiddleware } from 'http-proxy-middleware';
+import { setupSwagger } from './swagger';
 
 dotenv.config();
 
 const app: Application = express();
 
-// Security middleware
-app.use(helmet());
+// Security middleware (with CSP disabled for Swagger UI)
+app.use(helmet({
+  contentSecurityPolicy: false
+}));
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
   credentials: true,
@@ -30,6 +33,9 @@ app.use(morgan('combined'));
 
 // Body parsing
 app.use(express.json());
+
+// Setup Swagger documentation
+setupSwagger(app);
 
 // Service proxy routes
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://localhost:3001';
@@ -66,8 +72,11 @@ app.get('/', (req: Request, res: Response) => {
     message: 'InsureTech SaaS API Gateway',
     version: '1.0.0',
     architecture: 'microservices',
+    documentation: '/api-docs',
     endpoints: {
       health: '/health',
+      docs: '/api-docs',
+      docsJson: '/api-docs.json',
       auth: '/api/v1/auth',
       customers: '/api/v1/customers',
       policies: '/api/v1/policies',
@@ -86,6 +95,7 @@ const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log(`API Gateway running on port ${PORT}`);
+  console.log(`Swagger UI available at http://localhost:${PORT}/api-docs`);
   console.log(`Routing to services:`);
   console.log(`  - Auth: ${AUTH_SERVICE_URL}`);
   console.log(`  - Customers: ${CUSTOMER_SERVICE_URL}`);
