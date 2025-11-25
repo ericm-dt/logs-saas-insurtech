@@ -25,7 +25,7 @@ enum PolicyStatus {
 
 model Policy {
   id            String       @id @default(uuid())
-  customerId    String       // Reference to customer in customer-service
+  userId        String       // Reference to user in user-service
   policyNumber  String       @unique
   type          PolicyType
   status        PolicyStatus @default(PENDING)
@@ -36,7 +36,7 @@ model Policy {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  @@index([customerId])
+  @@index([userId])
   @@index([policyNumber])
   @@index([status])
 }

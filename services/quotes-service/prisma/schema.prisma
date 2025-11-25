@@ -24,7 +24,7 @@ enum QuoteStatus {
 
 model Quote {
   id              String      @id @default(uuid())
-  customerId      String      // Reference to customer in customer-service
+  userId          String      // Reference to user in user-service
   quoteNumber     String      @unique
   type            PolicyType
   status          QuoteStatus @default(ACTIVE)
@@ -34,7 +34,7 @@ model Quote {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  @@index([customerId])
+  @@index([userId])
   @@index([quoteNumber])
   @@index([status])
   @@index([expiresAt])

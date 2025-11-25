@@ -15,15 +15,23 @@ enum UserRole {
 }
 
 model User {
-  id             String   @id @default(uuid())
-  email          String   @unique
+  id             String    @id @default(uuid())
+  email          String    @unique
   password       String
   firstName      String
   lastName       String
-  role           UserRole @default(CUSTOMER)
+  role           UserRole  @default(CUSTOMER)
   organizationId String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  // Customer-specific fields
+  dateOfBirth    DateTime?
+  phone          String?
+  street         String?
+  city           String?
+  state          String?
+  zipCode        String?
+  country        String    @default("USA")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@map("users")
 }

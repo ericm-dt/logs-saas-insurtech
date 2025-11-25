@@ -10,7 +10,22 @@ interface AuthTokenPayload {
 }
 
 export class AuthService {
-  async register(email: string, password: string, firstName: string, lastName: string, role: UserRole = UserRole.CUSTOMER) {
+  async register(
+    email: string, 
+    password: string, 
+    firstName: string, 
+    lastName: string, 
+    role: UserRole = UserRole.CUSTOMER,
+    customerData?: {
+      dateOfBirth?: Date;
+      phone?: string;
+      street?: string;
+      city?: string;
+      state?: string;
+      zipCode?: string;
+      country?: string;
+    }
+  ) {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       throw new Error('User already exists');
@@ -25,6 +40,15 @@ export class AuthService {
         firstName,
         lastName,
         role,
+        ...(customerData && {
+          dateOfBirth: customerData.dateOfBirth,
+          phone: customerData.phone,
+          street: customerData.street,
+          city: customerData.city,
+          state: customerData.state,
+          zipCode: customerData.zipCode,
+          country: customerData.country,
+        }),
       },
     });
 

@@ -25,11 +25,7 @@ const options: swaggerJsdoc.Options = {
       },
       {
         url: 'http://localhost:3001',
-        description: 'Auth Service (Direct)'
-      },
-      {
-        url: 'http://localhost:3002',
-        description: 'Customer Service (Direct)'
+        description: 'User Service (Direct)'
       },
       {
         url: 'http://localhost:3003',
@@ -93,6 +89,28 @@ const options: swaggerJsdoc.Options = {
             role: {
               type: 'string',
               enum: ['ADMIN', 'AGENT', 'CUSTOMER']
+            },
+            dateOfBirth: {
+              type: 'string',
+              format: 'date'
+            },
+            phone: {
+              type: 'string'
+            },
+            street: {
+              type: 'string'
+            },
+            city: {
+              type: 'string'
+            },
+            state: {
+              type: 'string'
+            },
+            zipCode: {
+              type: 'string'
+            },
+            country: {
+              type: 'string'
             },
             createdAt: {
               type: 'string',
@@ -160,7 +178,7 @@ const options: swaggerJsdoc.Options = {
               type: 'string',
               format: 'uuid'
             },
-            customerId: {
+            userId: {
               type: 'string',
               format: 'uuid'
             },
@@ -208,7 +226,7 @@ const options: swaggerJsdoc.Options = {
               type: 'string',
               format: 'uuid'
             },
-            customerId: {
+            userId: {
               type: 'string',
               format: 'uuid'
             },
@@ -251,7 +269,7 @@ const options: swaggerJsdoc.Options = {
               type: 'string',
               format: 'uuid'
             },
-            customerId: {
+            userId: {
               type: 'string',
               format: 'uuid'
             },
@@ -293,8 +311,8 @@ const options: swaggerJsdoc.Options = {
         description: 'User authentication and registration endpoints'
       },
       {
-        name: 'Customers',
-        description: 'Customer management operations'
+        name: 'Users',
+        description: 'User/customer management operations'
       },
       {
         name: 'Policies',

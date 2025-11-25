@@ -7,7 +7,7 @@ import axios from 'axios';
 const router = Router();
 const prisma = new PrismaClient();
 
-const CUSTOMER_SERVICE_URL = process.env.CUSTOMER_SERVICE_URL || 'http://localhost:3002';
+const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://localhost:3001';
 
 // Validation middleware
 const validate = (validations: ValidationChain[]) => {
@@ -27,11 +27,11 @@ const validate = (validations: ValidationChain[]) => {
   };
 };
 
-// Validate customer exists
-async function validateCustomer(customerId: string, token: string): Promise<boolean> {
+// Validate user exists
+async function validateUser(userId: string, token: string): Promise<boolean> {
   try {
     const response = await axios.get(
-      `${CUSTOMER_SERVICE_URL}/api/customers/${customerId}`,
+      `${USER_SERVICE_URL}/api/users/${userId}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     return response.data.success;
@@ -106,7 +106,7 @@ router.post(
   '/',
   authenticate,
   validate([
-    body('customerId').notEmpty().withMessage('Customer ID is required'),
+    body('userId').notEmpty().withMessage('User ID is required'),
     body('quoteNumber').notEmpty().withMessage('Quote number is required'),
     body('type').isIn(['AUTO', 'HOME', 'LIFE', 'HEALTH', 'BUSINESS']).withMessage('Invalid policy type'),
     body('coverageAmount').isNumeric().withMessage('Coverage amount must be numeric'),
@@ -114,16 +114,16 @@ router.post(
   ]),
   async (req: AuthRequest, res): Promise<void> => {
     try {
-      const { customerId, quoteNumber, type, coverageAmount, expiresAt } = req.body;
+      const { userId, quoteNumber, type, coverageAmount, expiresAt } = req.body;
 
-      // Validate customer exists
+      // Validate user exists
       const token = req.headers.authorization?.substring(7) || '';
-      const customerExists = await validateCustomer(customerId, token);
+      const userExists = await validateUser(userId, token);
       
-      if (!customerExists) {
+      if (!userExists) {
         res.status(400).json({
           success: false,
-          message: 'Customer not found'
+          message: 'User not found'
         });
         return;
       }
@@ -137,7 +137,7 @@ router.post(
 
       const quote = await prisma.quote.create({
         data: {
-          customerId,
+          userId,
           quoteNumber,
           type,
           coverageAmount,

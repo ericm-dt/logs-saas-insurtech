@@ -7,7 +7,7 @@ import axios from 'axios';
 const router = Router();
 const prisma = new PrismaClient();
 
-const CUSTOMER_SERVICE_URL = process.env.CUSTOMER_SERVICE_URL || 'http://localhost:3002';
+const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://localhost:3001';
 const POLICY_SERVICE_URL = process.env.POLICY_SERVICE_URL || 'http://localhost:3003';
 
 // Validation middleware
@@ -48,11 +48,11 @@ async function validatePolicy(policyId: string, token: string): Promise<{ valid:
   }
 }
 
-// Validate customer exists
-async function validateCustomer(customerId: string, token: string): Promise<boolean> {
+// Validate user exists
+async function validateUser(userId: string, token: string): Promise<boolean> {
   try {
     const response = await axios.get(
-      `${CUSTOMER_SERVICE_URL}/api/customers/${customerId}`,
+      `${USER_SERVICE_URL}/api/users/${userId}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     return response.data.success;
@@ -112,7 +112,7 @@ router.post(
   '/',
   authenticate,
   validate([
-    body('customerId').notEmpty().withMessage('Customer ID is required'),
+    body('userId').notEmpty().withMessage('User ID is required'),
     body('policyId').notEmpty().withMessage('Policy ID is required'),
     body('claimNumber').notEmpty().withMessage('Claim number is required'),
     body('incidentDate').isISO8601().withMessage('Valid incident date required'),
@@ -121,16 +121,16 @@ router.post(
   ]),
   async (req: AuthRequest, res): Promise<void> => {
     try {
-      const { customerId, policyId, claimNumber, incidentDate, description, claimAmount } = req.body;
+      const { userId, policyId, claimNumber, incidentDate, description, claimAmount } = req.body;
 
       const token = req.headers.authorization?.substring(7) || '';
 
-      // Validate customer exists
-      const customerExists = await validateCustomer(customerId, token);
-      if (!customerExists) {
+      // Validate user exists
+      const userExists = await validateUser(userId, token);
+      if (!userExists) {
         res.status(400).json({
           success: false,
-          message: 'Customer not found'
+          message: 'User not found'
         });
         return;
       }
@@ -145,18 +145,18 @@ router.post(
         return;
       }
 
-      // Verify customer owns the policy
-      if (policyValidation.policy.customerId !== customerId) {
+      // Verify user owns the policy
+      if (policyValidation.policy.userId !== userId) {
         res.status(400).json({
           success: false,
-          message: 'Policy does not belong to this customer'
+          message: 'Policy does not belong to this user'
         });
         return;
       }
 
       const claim = await prisma.claim.create({
         data: {
-          customerId,
+          userId,
           policyId,
           claimNumber,
           incidentDate: new Date(incidentDate),

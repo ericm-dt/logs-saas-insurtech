@@ -18,8 +18,8 @@ services:
       timeout: 5s
       retries: 5
 
-  # Auth Service
-  auth-service:
+  # User Service (formerly auth-service + customer-service)
+  user-service:
     build:
       context: ./services/auth-service
       dockerfile: Dockerfile
@@ -27,30 +27,12 @@ services:
       - "3001:3001"
     environment:
       PORT: 3001
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/auth_db
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/user_db
       JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key}
       JWT_EXPIRES_IN: 7d
     depends_on:
       postgres:
         condition: service_healthy
-    restart: unless-stopped
-
-  # Customer Service
-  customer-service:
-    build:
-      context: ./services/customer-service
-      dockerfile: Dockerfile
-    ports:
-      - "3002:3002"
-    environment:
-      PORT: 3002
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/customer_db
-      AUTH_SERVICE_URL: http://auth-service:3001
-    depends_on:
-      postgres:
-        condition: service_healthy
-      auth-service:
-        condition: service_started
     restart: unless-stopped
 
   # Policy Service
@@ -63,14 +45,11 @@ services:
     environment:
       PORT: 3003
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/policy_db
-      AUTH_SERVICE_URL: http://auth-service:3001
-      CUSTOMER_SERVICE_URL: http://customer-service:3002
+      USER_SERVICE_URL: http://user-service:3001
     depends_on:
       postgres:
         condition: service_healthy
-      auth-service:
-        condition: service_started
-      customer-service:
+      user-service:
         condition: service_started
     restart: unless-stopped
 
@@ -84,13 +63,12 @@ services:
     environment:
       PORT: 3004
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/claims_db
-      AUTH_SERVICE_URL: http://auth-service:3001
+      USER_SERVICE_URL: http://user-service:3001
       POLICY_SERVICE_URL: http://policy-service:3003
-      CUSTOMER_SERVICE_URL: http://customer-service:3002
     depends_on:
       postgres:
         condition: service_healthy
-      auth-service:
+      user-service:
         condition: service_started
       policy-service:
         condition: service_started
@@ -106,14 +84,11 @@ services:
     environment:
       PORT: 3005
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/quotes_db
-      AUTH_SERVICE_URL: http://auth-service:3001
-      CUSTOMER_SERVICE_URL: http://customer-service:3002
+      USER_SERVICE_URL: http://user-service:3001
     depends_on:
       postgres:
         condition: service_healthy
-      auth-service:
-        condition: service_started
-      customer-service:
+      user-service:
         condition: service_started
     restart: unless-stopped
 
@@ -126,8 +101,7 @@ services:
       - "3000:3000"
     environment:
       PORT: 3000
-      AUTH_SERVICE_URL: http://auth-service:3001
-      CUSTOMER_SERVICE_URL: http://customer-service:3002
+      USER_SERVICE_URL: http://user-service:3001
       POLICY_SERVICE_URL: http://policy-service:3003
       CLAIMS_SERVICE_URL: http://claims-service:3004
       QUOTES_SERVICE_URL: http://quotes-service:3005
@@ -135,18 +109,17 @@ services:
       RATE_LIMIT_MAX_REQUESTS: 100
       ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173
     depends_on:
-      - auth-service
-      - customer-service
+      - user-service
       - policy-service
       - claims-service
       - quotes-service
     restart: unless-stopped
 
-  # Prisma Studio - Auth DB
-  prisma-studio-auth:
+  # Prisma Studio - User DB
+  prisma-studio-user:
     image: node:24-alpine
     working_dir: /app
-    command: sh -c "npm install -g prisma && npx prisma studio --port 5555 --browser none --url postgresql://postgres:postgres@postgres:5432/auth_db"
+    command: sh -c "npm install -g prisma && npx prisma studio --port 5555 --browser none --url postgresql://postgres:postgres@postgres:5432/user_db"
     ports:
       - "5555:5555"
     volumes:
@@ -156,27 +129,15 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # Prisma Studio - Customer DB
-  prisma-studio-customer:
-    image: node:24-alpine
-    working_dir: /app
-    command: sh -c "npm install -g prisma && npx prisma studio --port 5556 --browser none --url postgresql://postgres:postgres@postgres:5432/customer_db"
-    ports:
-      - "5556:5556"
-    volumes:
-      - ./services/customer-service/prisma:/app/prisma
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
+  # Prisma Studio - Customer DB (REMOVED - merged with user_db)
 
   # Prisma Studio - Policy DB
   prisma-studio-policy:
     image: node:24-alpine
     working_dir: /app
-    command: sh -c "npm install -g prisma && npx prisma studio --port 5557 --browser none --url postgresql://postgres:postgres@postgres:5432/policy_db"
+    command: sh -c "npm install -g prisma && npx prisma studio --port 5556 --browser none --url postgresql://postgres:postgres@postgres:5432/policy_db"
     ports:
-      - "5557:5557"
+      - "5556:5556"
     volumes:
       - ./services/policy-service/prisma:/app/prisma
     depends_on:
@@ -188,9 +149,9 @@ services:
   prisma-studio-claims:
     image: node:24-alpine
     working_dir: /app
-    command: sh -c "npm install -g prisma && npx prisma studio --port 5558 --browser none --url postgresql://postgres:postgres@postgres:5432/claims_db"
+    command: sh -c "npm install -g prisma && npx prisma studio --port 5557 --browser none --url postgresql://postgres:postgres@postgres:5432/claims_db"
     ports:
-      - "5558:5558"
+      - "5557:5557"
     volumes:
       - ./services/claims-service/prisma:/app/prisma
     depends_on:
@@ -202,9 +163,9 @@ services:
   prisma-studio-quotes:
     image: node:24-alpine
     working_dir: /app
-    command: sh -c "npm install -g prisma && npx prisma studio --port 5559 --browser none --url postgresql://postgres:postgres@postgres:5432/quotes_db"
+    command: sh -c "npm install -g prisma && npx prisma studio --port 5558 --browser none --url postgresql://postgres:postgres@postgres:5432/quotes_db"
     ports:
-      - "5559:5559"
+      - "5558:5558"
     volumes:
       - ./services/quotes-service/prisma:/app/prisma
     depends_on:

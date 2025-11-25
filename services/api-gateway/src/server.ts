@@ -38,8 +38,7 @@ app.use(express.json());
 setupSwagger(app);
 
 // Service proxy routes
-const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://localhost:3001';
-const CUSTOMER_SERVICE_URL = process.env.CUSTOMER_SERVICE_URL || 'http://localhost:3002';
+const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://localhost:3001';
 const POLICY_SERVICE_URL = process.env.POLICY_SERVICE_URL || 'http://localhost:3003';
 const CLAIMS_SERVICE_URL = process.env.CLAIMS_SERVICE_URL || 'http://localhost:3004';
 const QUOTES_SERVICE_URL = process.env.QUOTES_SERVICE_URL || 'http://localhost:3005';
@@ -60,8 +59,8 @@ const proxyOptions = {
 };
 
 // Route to services
-app.use('/api/v1/auth', createProxyMiddleware({ ...proxyOptions, target: AUTH_SERVICE_URL }));
-app.use('/api/v1/customers', createProxyMiddleware({ ...proxyOptions, target: CUSTOMER_SERVICE_URL }));
+app.use('/api/v1/auth', createProxyMiddleware({ ...proxyOptions, target: USER_SERVICE_URL }));
+app.use('/api/v1/users', createProxyMiddleware({ ...proxyOptions, target: USER_SERVICE_URL }));
 app.use('/api/v1/policies', createProxyMiddleware({ ...proxyOptions, target: POLICY_SERVICE_URL }));
 app.use('/api/v1/claims', createProxyMiddleware({ ...proxyOptions, target: CLAIMS_SERVICE_URL }));
 app.use('/api/v1/quotes', createProxyMiddleware({ ...proxyOptions, target: QUOTES_SERVICE_URL }));
@@ -78,7 +77,7 @@ app.get('/', (req: Request, res: Response) => {
       docs: '/api-docs',
       docsJson: '/api-docs.json',
       auth: '/api/v1/auth',
-      customers: '/api/v1/customers',
+      users: '/api/v1/users',
       policies: '/api/v1/policies',
       claims: '/api/v1/claims',
       quotes: '/api/v1/quotes',
@@ -97,8 +96,7 @@ app.listen(PORT, () => {
   console.log(`API Gateway running on port ${PORT}`);
   console.log(`Swagger UI available at http://localhost:${PORT}/api-docs`);
   console.log(`Routing to services:`);
-  console.log(`  - Auth: ${AUTH_SERVICE_URL}`);
-  console.log(`  - Customers: ${CUSTOMER_SERVICE_URL}`);
+  console.log(`  - User: ${USER_SERVICE_URL}`);
   console.log(`  - Policies: ${POLICY_SERVICE_URL}`);
   console.log(`  - Claims: ${CLAIMS_SERVICE_URL}`);
   console.log(`  - Quotes: ${QUOTES_SERVICE_URL}`);
