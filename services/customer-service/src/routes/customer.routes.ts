@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 const router = Router();
 const prisma = new PrismaClient();
 
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, firstName, lastName, dateOfBirth, phone, address } = req.body;
     
@@ -30,7 +30,7 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const customers = await prisma.customer.findMany();
     res.json({ success: true, data: customers });
@@ -40,14 +40,15 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const customer = await prisma.customer.findUnique({
       where: { id: req.params.id },
     });
 
     if (!customer) {
-      return res.status(404).json({ success: false, message: 'Customer not found' });
+      res.status(404).json({ success: false, message: 'Customer not found' });
+      return;
     }
 
     res.json({ success: true, data: customer });
@@ -57,7 +58,7 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const customer = await prisma.customer.update({
       where: { id: req.params.id },
@@ -71,7 +72,7 @@ router.put('/:id', async (req: Request, res: Response) => {
   }
 });
 
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     await prisma.customer.delete({
       where: { id: req.params.id },

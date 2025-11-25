@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { body, param, ValidationChain, validationResult } from 'express-validator';
+import { body, param, ValidationChain } from 'express-validator';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import axios from 'axios';
@@ -11,15 +11,16 @@ const CUSTOMER_SERVICE_URL = process.env.CUSTOMER_SERVICE_URL || 'http://localho
 
 // Validation middleware
 const validate = (validations: ValidationChain[]) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     for (const validation of validations) {
       const result = await validation.run(req);
       if (!result.isEmpty()) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Validation failed',
           errors: result.array()
         });
+        return;
       }
     }
     next();
@@ -40,7 +41,7 @@ async function validateCustomer(customerId: string, token: string): Promise<bool
 }
 
 // Get all policies
-router.get('/', authenticate, async (req: AuthRequest, res) => {
+router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
   try {
     const policies = await prisma.policy.findMany({
       orderBy: { createdAt: 'desc' }
@@ -59,17 +60,18 @@ router.get('/', authenticate, async (req: AuthRequest, res) => {
 });
 
 // Get policy by ID
-router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, res) => {
+router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
   try {
     const policy = await prisma.policy.findUnique({
       where: { id: req.params.id }
     });
 
     if (!policy) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         message: 'Policy not found'
       });
+      return;
     }
 
     res.json({
@@ -97,7 +99,7 @@ router.post(
     body('premium').isNumeric().withMessage('Premium must be numeric'),
     body('coverageAmount').isNumeric().withMessage('Coverage amount must be numeric')
   ]),
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res): Promise<void> => {
     try {
       const { customerId, policyNumber, type, startDate, endDate, premium, coverageAmount, status } = req.body;
 
@@ -106,10 +108,11 @@ router.post(
       const customerExists = await validateCustomer(customerId, token);
       
       if (!customerExists) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Customer not found'
         });
+        return;
       }
 
       const policy = await prisma.policy.create({
@@ -131,10 +134,11 @@ router.post(
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Policy number already exists'
         });
+        return;
       }
       res.status(500).json({
         success: false,
@@ -149,7 +153,7 @@ router.put(
   '/:id',
   authenticate,
   param('id').isUUID(),
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res): Promise<void> => {
     try {
       const { status, premium, coverageAmount, endDate } = req.body;
 
@@ -169,10 +173,11 @@ router.put(
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Policy not found'
         });
+        return;
       }
       res.status(500).json({
         success: false,
@@ -183,7 +188,7 @@ router.put(
 );
 
 // Delete policy
-router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, res) => {
+router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
   try {
     await prisma.policy.delete({
       where: { id: req.params.id }
@@ -195,10 +200,11 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         message: 'Policy not found'
       });
+      return;
     }
     res.status(500).json({
       success: false,

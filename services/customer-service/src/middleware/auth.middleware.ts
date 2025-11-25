@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import axios from 'axios';
 
-export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
+export async function authMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
-      return res.status(401).json({ success: false, message: 'No token provided' });
+      res.status(401).json({ success: false, message: 'No token provided' });
+      return;
     }
 
     const token = authHeader.replace('Bearer ', '');

@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/database';
+import { UserRole } from '@prisma/client';
 
 interface AuthTokenPayload {
   userId: string;
@@ -9,7 +10,7 @@ interface AuthTokenPayload {
 }
 
 export class AuthService {
-  async register(email: string, password: string, firstName: string, lastName: string, role: string = 'CUSTOMER') {
+  async register(email: string, password: string, firstName: string, lastName: string, role: UserRole = UserRole.CUSTOMER) {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       throw new Error('User already exists');
@@ -51,9 +52,10 @@ export class AuthService {
   }
 
   generateToken(payload: AuthTokenPayload): string {
-    return jwt.sign(payload, process.env.JWT_SECRET || 'secret', {
-      expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-    });
+    const secret = process.env.JWT_SECRET || 'secret';
+    return jwt.sign(payload, secret, { 
+      expiresIn: process.env.JWT_EXPIRES_IN || '7d'
+    } as jwt.SignOptions);
   }
 
   verifyToken(token: string): AuthTokenPayload {

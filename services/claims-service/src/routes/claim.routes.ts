@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { body, param, ValidationChain } from 'express-validator';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import axios from 'axios';
 
@@ -12,15 +12,16 @@ const POLICY_SERVICE_URL = process.env.POLICY_SERVICE_URL || 'http://localhost:3
 
 // Validation middleware
 const validate = (validations: ValidationChain[]) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     for (const validation of validations) {
       const result = await validation.run(req);
       if (!result.isEmpty()) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Validation failed',
           errors: result.array()
         });
+        return;
       }
     }
     next();
@@ -61,7 +62,7 @@ async function validateCustomer(customerId: string, token: string): Promise<bool
 }
 
 // Get all claims
-router.get('/', authenticate, async (req: AuthRequest, res) => {
+router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
   try {
     const claims = await prisma.claim.findMany({
       orderBy: { createdAt: 'desc' }
@@ -80,17 +81,18 @@ router.get('/', authenticate, async (req: AuthRequest, res) => {
 });
 
 // Get claim by ID
-router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, res) => {
+router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
   try {
     const claim = await prisma.claim.findUnique({
       where: { id: req.params.id }
     });
 
     if (!claim) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         message: 'Claim not found'
       });
+      return;
     }
 
     res.json({
@@ -117,7 +119,7 @@ router.post(
     body('description').notEmpty().withMessage('Description is required'),
     body('claimAmount').isNumeric().withMessage('Claim amount must be numeric')
   ]),
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res): Promise<void> => {
     try {
       const { customerId, policyId, claimNumber, incidentDate, description, claimAmount } = req.body;
 
@@ -126,27 +128,30 @@ router.post(
       // Validate customer exists
       const customerExists = await validateCustomer(customerId, token);
       if (!customerExists) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Customer not found'
         });
+        return;
       }
 
       // Validate policy exists and is active
       const policyValidation = await validatePolicy(policyId, token);
       if (!policyValidation.valid) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Policy not found or not active'
         });
+        return;
       }
 
       // Verify customer owns the policy
       if (policyValidation.policy.customerId !== customerId) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Policy does not belong to this customer'
         });
+        return;
       }
 
       const claim = await prisma.claim.create({
@@ -166,11 +171,12 @@ router.post(
         data: claim
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        return res.status(400).json({
+      if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002') {
+        res.status(400).json({
           success: false,
           message: 'Claim number already exists'
         });
+        return;
       }
       res.status(500).json({
         success: false,
@@ -191,7 +197,7 @@ router.put(
     body('approvedAmount').optional().isNumeric().withMessage('Approved amount must be numeric'),
     body('denialReason').optional().isString().withMessage('Denial reason must be string')
   ]),
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res): Promise<void> => {
     try {
       const { status, approvedAmount, denialReason } = req.body;
 
@@ -201,10 +207,11 @@ router.put(
       });
 
       if (!currentClaim) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Claim not found'
         });
+        return;
       }
 
       // Validate status workflow
@@ -217,26 +224,29 @@ router.put(
       };
 
       if (!validTransitions[currentClaim.status].includes(status)) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: `Invalid status transition from ${currentClaim.status} to ${status}`
         });
+        return;
       }
 
       // Require approval amount for APPROVED status
       if (status === 'APPROVED' && !approvedAmount) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Approved amount required for APPROVED status'
         });
+        return;
       }
 
       // Require denial reason for DENIED status
       if (status === 'DENIED' && !denialReason) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Denial reason required for DENIED status'
         });
+        return;
       }
 
       const claim = await prisma.claim.update({
@@ -253,11 +263,12 @@ router.put(
         data: claim
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        return res.status(404).json({
+      if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2025') {
+        res.status(404).json({
           success: false,
           message: 'Claim not found'
         });
+        return;
       }
       res.status(500).json({
         success: false,
@@ -268,7 +279,7 @@ router.put(
 );
 
 // Delete claim
-router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, res) => {
+router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
   try {
     await prisma.claim.delete({
       where: { id: req.params.id }
@@ -279,11 +290,12 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
       message: 'Claim deleted successfully'
     });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-      return res.status(404).json({
+    if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2025') {
+      res.status(404).json({
         success: false,
         message: 'Claim not found'
       });
+      return;
     }
     res.status(500).json({
       success: false,
