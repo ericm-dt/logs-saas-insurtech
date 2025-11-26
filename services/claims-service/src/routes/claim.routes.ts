@@ -107,6 +107,26 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
   }
 });
 
+// Get claim status history
+router.get('/:id/history', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
+  try {
+    const history = await prisma.claimStatusHistory.findMany({
+      where: { claimId: req.params.id },
+      orderBy: { changedAt: 'desc' }
+    });
+
+    res.json({
+      success: true,
+      data: history
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch claim history'
+    });
+  }
+});
+
 // Create claim
 router.post(
   '/',
@@ -250,18 +270,40 @@ router.put(
         return;
       }
 
-      const claim = await prisma.claim.update({
-        where: { id: req.params.id },
-        data: {
-          status,
-          ...(approvedAmount && { approvedAmount }),
-          ...(denialReason && { denialReason })
-        }
+      // Use transaction to update claim and create history entry atomically
+      const result = await prisma.$transaction(async (tx: any) => {
+        // Update the claim
+        const updatedClaim = await tx.claim.update({
+          where: { id: req.params.id },
+          data: {
+            status,
+            ...(approvedAmount && { approvedAmount }),
+            ...(denialReason && { denialReason })
+          }
+        });
+
+        // Create status history entry
+        await tx.claimStatusHistory.create({
+          data: {
+            claimId: req.params.id,
+            organizationId: currentClaim.organizationId,
+            oldStatus: currentClaim.status,
+            newStatus: status,
+            changedBy: (req as AuthRequest).user!.userId,
+            reason: denialReason || undefined,
+            metadata: {
+              approvedAmount: approvedAmount || null,
+              previousStatus: currentClaim.status
+            }
+          }
+        });
+
+        return updatedClaim;
       });
 
       res.json({
         success: true,
-        data: claim
+        data: result
       });
     } catch (error) {
       if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2025') {

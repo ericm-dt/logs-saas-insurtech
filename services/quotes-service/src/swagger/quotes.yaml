@@ -198,6 +198,93 @@ paths:
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
+  /api/quotes/{id}/status:
+    put:
+      tags:
+        - Quotes
+      summary: Update quote status
+      description: Update quote status (ACTIVE → EXPIRED/CONVERTED). Creates history entry automatically.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Quote UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [ACTIVE, EXPIRED, CONVERTED]
+                  example: CONVERTED
+                statusChangeReason:
+                  type: string
+                  description: Optional reason for status change (tracked in history)
+                  example: Customer accepted quote and policy created
+      responses:
+        '200':
+          description: Quote status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Quote'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/quotes/{id}/history:
+    get:
+      tags:
+        - Quotes
+      summary: Get quote status history
+      description: Retrieve the complete history of status changes for a quote
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Quote UUID
+      responses:
+        '200':
+          description: Quote status history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/QuoteStatusHistory'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
   /api/quotes/expire-old:
     post:
       tags:

@@ -157,6 +157,49 @@ const swaggerSpec = {
           },
         },
       },
+      QuoteStatusHistory: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            format: 'uuid',
+          },
+          quoteId: {
+            type: 'string',
+            format: 'uuid',
+          },
+          organizationId: {
+            type: 'string',
+            format: 'uuid',
+          },
+          oldStatus: {
+            type: 'string',
+            enum: ['PENDING', 'ACCEPTED', 'REJECTED', 'EXPIRED'],
+            nullable: true,
+          },
+          newStatus: {
+            type: 'string',
+            enum: ['PENDING', 'ACCEPTED', 'REJECTED', 'EXPIRED'],
+          },
+          changedBy: {
+            type: 'string',
+            format: 'uuid',
+            description: 'User ID who made the change',
+          },
+          changedAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+          reason: {
+            type: 'string',
+            nullable: true,
+          },
+          metadata: {
+            type: 'object',
+            nullable: true,
+          },
+        },
+      },
     },
   },
   tags: [

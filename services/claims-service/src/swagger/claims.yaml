@@ -212,3 +212,108 @@ paths:
           $ref: '#/components/responses/UnauthorizedError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
+
+  /api/claims/{id}/status:
+    put:
+      tags:
+        - Claims
+      summary: Update claim status
+      description: Update claim status with workflow validation (SUBMITTED → UNDER_REVIEW → APPROVED/DENIED → PAID). Creates history entry.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Claim UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [SUBMITTED, UNDER_REVIEW, APPROVED, DENIED, PAID]
+                  example: APPROVED
+                approvedAmount:
+                  type: number
+                  format: decimal
+                  description: Required when status is APPROVED
+                  example: 4500.00
+                denialReason:
+                  type: string
+                  description: Required when status is DENIED
+                  example: Claim not covered under policy terms
+      responses:
+        '200':
+          description: Claim status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Claim'
+        '400':
+          description: Invalid status transition or missing required fields
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Invalid status transition from SUBMITTED to PAID
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/claims/{id}/history:
+    get:
+      tags:
+        - Claims
+      summary: Get claim status history
+      description: Retrieve the complete history of status changes for a claim
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Claim UUID
+      responses:
+        '200':
+          description: Claim status history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ClaimStatusHistory'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'

@@ -164,6 +164,10 @@ paths:
                 endDate:
                   type: string
                   format: date
+                statusChangeReason:
+                  type: string
+                  description: Optional reason for status change (tracked in history)
+                  example: Customer requested policy cancellation
       responses:
         '200':
           description: Policy updated successfully
@@ -217,3 +221,39 @@ paths:
           $ref: '#/components/responses/UnauthorizedError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
+
+  /api/policies/{id}/history:
+    get:
+      tags:
+        - Policies
+      summary: Get policy status history
+      description: Retrieve the complete history of status changes for a policy
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Policy UUID
+      responses:
+        '200':
+          description: Policy status history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PolicyStatusHistory'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'

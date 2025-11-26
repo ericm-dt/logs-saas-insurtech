@@ -34,10 +34,29 @@ model Quote {
   expiresAt       DateTime
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+  statusHistory   QuoteStatusHistory[]
 
   @@index([userId])
   @@index([organizationId])
   @@index([quoteNumber])
   @@index([status])
   @@index([expiresAt])
+}
+
+model QuoteStatusHistory {
+  id             String       @id @default(uuid())
+  quoteId        String
+  quote          Quote        @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  organizationId String       // Denormalized for querying
+  oldStatus      QuoteStatus?
+  newStatus      QuoteStatus
+  changedBy      String       // userId who made the change
+  changedAt      DateTime     @default(now())
+  reason         String?      // Optional reason for the change
+  metadata       Json?        // Additional context
+
+  @@index([quoteId])
+  @@index([organizationId])
+  @@index([changedAt])
+  @@index([changedBy])
 }

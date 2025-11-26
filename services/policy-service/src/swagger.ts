@@ -164,6 +164,49 @@ const swaggerSpec = {
           },
         },
       },
+      PolicyStatusHistory: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            format: 'uuid',
+          },
+          policyId: {
+            type: 'string',
+            format: 'uuid',
+          },
+          organizationId: {
+            type: 'string',
+            format: 'uuid',
+          },
+          oldStatus: {
+            type: 'string',
+            enum: ['ACTIVE', 'INACTIVE', 'PENDING', 'CANCELLED', 'EXPIRED'],
+            nullable: true,
+          },
+          newStatus: {
+            type: 'string',
+            enum: ['ACTIVE', 'INACTIVE', 'PENDING', 'CANCELLED', 'EXPIRED'],
+          },
+          changedBy: {
+            type: 'string',
+            format: 'uuid',
+            description: 'User ID who made the change',
+          },
+          changedAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+          reason: {
+            type: 'string',
+            nullable: true,
+          },
+          metadata: {
+            type: 'object',
+            nullable: true,
+          },
+        },
+      },
     },
   },
   tags: [

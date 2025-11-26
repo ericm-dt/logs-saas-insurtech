@@ -159,6 +159,49 @@ const swaggerSpec = {
           },
         },
       },
+      ClaimStatusHistory: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            format: 'uuid',
+          },
+          claimId: {
+            type: 'string',
+            format: 'uuid',
+          },
+          organizationId: {
+            type: 'string',
+            format: 'uuid',
+          },
+          oldStatus: {
+            type: 'string',
+            enum: ['SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'DENIED', 'PAID'],
+            nullable: true,
+          },
+          newStatus: {
+            type: 'string',
+            enum: ['SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'DENIED', 'PAID'],
+          },
+          changedBy: {
+            type: 'string',
+            format: 'uuid',
+            description: 'User ID who made the change',
+          },
+          changedAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+          reason: {
+            type: 'string',
+            nullable: true,
+          },
+          metadata: {
+            type: 'object',
+            nullable: true,
+          },
+        },
+      },
     },
   },
   tags: [

@@ -101,6 +101,26 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
   }
 });
 
+// Get quote status history
+router.get('/:id/history', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
+  try {
+    const history = await prisma.quoteStatusHistory.findMany({
+      where: { quoteId: req.params.id },
+      orderBy: { changedAt: 'desc' }
+    });
+
+    res.json({
+      success: true,
+      data: history
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch quote history'
+    });
+  }
+});
+
 // Create quote
 router.post(
   '/',
@@ -175,20 +195,57 @@ router.put(
   authenticate,
   param('id').isUUID(),
   validate([
-    body('status').isIn(['ACTIVE', 'EXPIRED', 'CONVERTED']).withMessage('Invalid status')
+    body('status').isIn(['ACTIVE', 'EXPIRED', 'CONVERTED']).withMessage('Invalid status'),
+    body('statusChangeReason').optional().isString().withMessage('Status change reason must be string')
   ]),
   async (req: AuthRequest, res): Promise<void> => {
     try {
-      const { status } = req.body;
+      const { status, statusChangeReason } = req.body;
 
-      const quote = await prisma.quote.update({
-        where: { id: req.params.id },
-        data: { status }
+      // Get current quote for status history
+      const currentQuote = await prisma.quote.findUnique({
+        where: { id: req.params.id }
+      });
+
+      if (!currentQuote) {
+        res.status(404).json({
+          success: false,
+          message: 'Quote not found'
+        });
+        return;
+      }
+
+      // Use transaction to update quote and create history entry atomically
+      const result = await prisma.$transaction(async (tx: any) => {
+        // Update the quote
+        const updatedQuote = await tx.quote.update({
+          where: { id: req.params.id },
+          data: { status }
+        });
+
+        // Create status history entry if status changed
+        if (status !== currentQuote.status) {
+          await tx.quoteStatusHistory.create({
+            data: {
+              quoteId: req.params.id,
+              organizationId: currentQuote.organizationId,
+              oldStatus: currentQuote.status,
+              newStatus: status,
+              changedBy: (req as AuthRequest).user!.userId,
+              reason: statusChangeReason || undefined,
+              metadata: {
+                previousStatus: currentQuote.status
+              }
+            }
+          });
+        }
+
+        return updatedQuote;
       });
 
       res.json({
         success: true,
-        data: quote
+        data: result
       });
     } catch (error) {
       if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2025') {

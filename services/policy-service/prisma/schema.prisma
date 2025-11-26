@@ -36,9 +36,28 @@ model Policy {
   coverageAmount Decimal      @db.Decimal(12, 2)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+  statusHistory  PolicyStatusHistory[]
 
   @@index([userId])
   @@index([organizationId])
   @@index([policyNumber])
   @@index([status])
+}
+
+model PolicyStatusHistory {
+  id             String       @id @default(uuid())
+  policyId       String
+  policy         Policy       @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  organizationId String       // Denormalized for querying
+  oldStatus      PolicyStatus?
+  newStatus      PolicyStatus
+  changedBy      String       // userId who made the change
+  changedAt      DateTime     @default(now())
+  reason         String?      // Optional reason for the change
+  metadata       Json?        // Additional context
+
+  @@index([policyId])
+  @@index([organizationId])
+  @@index([changedAt])
+  @@index([changedBy])
 }

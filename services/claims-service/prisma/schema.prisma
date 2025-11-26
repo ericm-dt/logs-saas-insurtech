@@ -30,10 +30,29 @@ model Claim {
   denialReason    String?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+  statusHistory   ClaimStatusHistory[]
 
   @@index([userId])
   @@index([organizationId])
   @@index([policyId])
   @@index([claimNumber])
   @@index([status])
+}
+
+model ClaimStatusHistory {
+  id             String       @id @default(uuid())
+  claimId        String
+  claim          Claim        @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  organizationId String       // Denormalized for querying
+  oldStatus      ClaimStatus?
+  newStatus      ClaimStatus
+  changedBy      String       // userId who made the change
+  changedAt      DateTime     @default(now())
+  reason         String?      // Optional reason for the change
+  metadata       Json?        // Additional context
+
+  @@index([claimId])
+  @@index([organizationId])
+  @@index([changedAt])
+  @@index([changedBy])
 }

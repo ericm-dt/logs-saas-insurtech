@@ -86,6 +86,26 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
   }
 });
 
+// Get policy status history
+router.get('/:id/history', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
+  try {
+    const history = await prisma.policyStatusHistory.findMany({
+      where: { policyId: req.params.id },
+      orderBy: { changedAt: 'desc' }
+    });
+
+    res.json({
+      success: true,
+      data: history
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch policy history'
+    });
+  }
+});
+
 // Create policy
 router.post(
   '/',
@@ -155,21 +175,59 @@ router.put(
   param('id').isUUID(),
   async (req: AuthRequest, res): Promise<void> => {
     try {
-      const { status, premium, coverageAmount, endDate } = req.body;
+      const { status, premium, coverageAmount, endDate, statusChangeReason } = req.body;
 
-      const policy = await prisma.policy.update({
-        where: { id: req.params.id },
-        data: {
-          ...(status && { status }),
-          ...(premium && { premium }),
-          ...(coverageAmount && { coverageAmount }),
-          ...(endDate && { endDate: new Date(endDate) })
+      // Get current policy for status history
+      const currentPolicy = await prisma.policy.findUnique({
+        where: { id: req.params.id }
+      });
+
+      if (!currentPolicy) {
+        res.status(404).json({
+          success: false,
+          message: 'Policy not found'
+        });
+        return;
+      }
+
+      // Use transaction to update policy and create history entry atomically
+      const result = await prisma.$transaction(async (tx) => {
+        // Update the policy
+        const updatedPolicy = await tx.policy.update({
+          where: { id: req.params.id },
+          data: {
+            ...(status && { status }),
+            ...(premium && { premium }),
+            ...(coverageAmount && { coverageAmount }),
+            ...(endDate && { endDate: new Date(endDate) })
+          }
+        });
+
+        // Create status history entry if status changed
+        if (status && status !== currentPolicy.status) {
+          await tx.policyStatusHistory.create({
+            data: {
+              policyId: req.params.id,
+              organizationId: currentPolicy.organizationId,
+              oldStatus: currentPolicy.status,
+              newStatus: status,
+              changedBy: (req as AuthRequest).user!.userId,
+              reason: statusChangeReason || undefined,
+              metadata: {
+                premiumChanged: premium !== undefined,
+                coverageChanged: coverageAmount !== undefined,
+                endDateChanged: endDate !== undefined
+              }
+            }
+          });
         }
+
+        return updatedPolicy;
       });
 
       res.json({
         success: true,
-        data: policy
+        data: result
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
