@@ -31,8 +31,14 @@ app.use(limiter);
 // Logging
 app.use(morgan('combined'));
 
-// Body parsing
-app.use(express.json());
+// Body parsing - only for non-proxied routes
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/v1/')) {
+    // Skip body parsing for proxied routes - let the backend service handle it
+    return next();
+  }
+  express.json()(req, res, next);
+});
 
 // Setup Swagger documentation
 setupSwagger(app);
@@ -46,6 +52,8 @@ const QUOTES_SERVICE_URL = process.env.QUOTES_SERVICE_URL || 'http://localhost:3
 // Proxy middleware configuration
 const proxyOptions = {
   changeOrigin: true,
+  timeout: parseInt(process.env.PROXY_TIMEOUT || '5000', 10), // 5 second timeout
+  proxyTimeout: parseInt(process.env.PROXY_TIMEOUT || '5000', 10),
   pathRewrite: (path: string, req: any) => {
     // Remove /api/v1 prefix when forwarding to services
     return path.replace(/^\/api\/v1/, '/api');
@@ -55,6 +63,16 @@ const proxyOptions = {
     if (req.headers.authorization) {
       proxyReq.setHeader('authorization', req.headers.authorization);
     }
+  },
+  onError: (err: any, req: any, res: any) => {
+    console.error('Proxy error:', err.message);
+    res.status(err.code === 'ECONNREFUSED' ? 503 : 504).json({
+      success: false,
+      message: err.code === 'ECONNREFUSED' 
+        ? 'Service unavailable' 
+        : 'Gateway timeout - service did not respond in time',
+      error: err.message
+    });
   },
 };
 
