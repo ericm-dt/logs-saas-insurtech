@@ -392,6 +392,137 @@ paths:
         '404':
           $ref: '#/components/responses/NotFoundError'
 
+components:
+  responses:
+    UnauthorizedError:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: Unauthorized
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: Validation failed
+              errors:
+                type: array
+                items:
+                  type: object
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: Not found
+    ForbiddenError:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: Forbidden
+  schemas:
+    Claim:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        policyId:
+          type: string
+          format: uuid
+        claimNumber:
+          type: string
+        status:
+          type: string
+          enum: [SUBMITTED, UNDER_REVIEW, APPROVED, DENIED, PAID]
+        incidentDate:
+          type: string
+          format: date
+        description:
+          type: string
+        claimAmount:
+          type: number
+          format: decimal
+        approvedAmount:
+          type: number
+          format: decimal
+          nullable: true
+        denialReason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ClaimStatusHistory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        claimId:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        oldStatus:
+          type: string
+          enum: [SUBMITTED, UNDER_REVIEW, APPROVED, DENIED, PAID]
+          nullable: true
+        newStatus:
+          type: string
+          enum: [SUBMITTED, UNDER_REVIEW, APPROVED, DENIED, PAID]
+        changedBy:
+          type: string
+          format: uuid
+        changedAt:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
 
   /api/claims/{id}/approve:
     post:
@@ -606,135 +737,3 @@ paths:
                         example: 1
         '401':
           $ref: '#/components/responses/UnauthorizedError'
-components:
-  responses:
-    UnauthorizedError:
-      description: Authentication required
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              success:
-                type: boolean
-                example: false
-              message:
-                type: string
-                example: Unauthorized
-    ValidationError:
-      description: Validation error
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              success:
-                type: boolean
-                example: false
-              message:
-                type: string
-                example: Validation failed
-              errors:
-                type: array
-                items:
-                  type: object
-    NotFoundError:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              success:
-                type: boolean
-                example: false
-              message:
-                type: string
-                example: Not found
-    ForbiddenError:
-      description: Insufficient permissions
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              success:
-                type: boolean
-                example: false
-              message:
-                type: string
-                example: Forbidden
-  schemas:
-    Claim:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        userId:
-          type: string
-          format: uuid
-        organizationId:
-          type: string
-          format: uuid
-        policyId:
-          type: string
-          format: uuid
-        claimNumber:
-          type: string
-        status:
-          type: string
-          enum: [SUBMITTED, UNDER_REVIEW, APPROVED, DENIED, PAID]
-        incidentDate:
-          type: string
-          format: date
-        description:
-          type: string
-        claimAmount:
-          type: number
-          format: decimal
-        approvedAmount:
-          type: number
-          format: decimal
-          nullable: true
-        denialReason:
-          type: string
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-    ClaimStatusHistory:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        claimId:
-          type: string
-          format: uuid
-        organizationId:
-          type: string
-          format: uuid
-        oldStatus:
-          type: string
-          enum: [SUBMITTED, UNDER_REVIEW, APPROVED, DENIED, PAID]
-          nullable: true
-        newStatus:
-          type: string
-          enum: [SUBMITTED, UNDER_REVIEW, APPROVED, DENIED, PAID]
-        changedBy:
-          type: string
-          format: uuid
-        changedAt:
-          type: string
-          format: date-time
-        reason:
-          type: string
-          nullable: true
-        metadata:
-          type: object
-          nullable: true
-

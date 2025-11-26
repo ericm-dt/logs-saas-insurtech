@@ -400,6 +400,199 @@ paths:
         '403':
           $ref: '#/components/responses/ForbiddenError'
 
+
+  /api/quotes/{id}/convert:
+    post:
+      tags:
+        - Quotes
+        - Workflows
+      summary: Convert quote to policy
+      description: |
+        Convert an ACTIVE quote into a policy. This is a workflow endpoint that:
+        - Validates quote is ACTIVE and not expired
+        - Creates a new policy with same terms (coverage, premium, type)
+        - Updates quote status to CONVERTED
+        - Cross-service call to policy-service
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Quote UUID to convert
+      responses:
+        '201':
+          description: Quote successfully converted to policy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      quote:
+                        $ref: '#/components/schemas/Quote'
+                      policy:
+                        type: object
+                        description: Newly created policy
+                  message:
+                    type: string
+                    example: Quote successfully converted to policy
+        '400':
+          description: Quote cannot be converted (not ACTIVE or expired)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Quote has expired
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/quotes/calculate:
+    post:
+      tags:
+        - Quotes
+        - Workflows
+      summary: Calculate premium estimate
+      description: |
+        Get a premium estimate without creating a quote record. 
+        This is a pre-quote workflow step that customers use to explore options.
+        Premium calculation uses: coverageAmount × baseRate (1.5%) × typeMultiplier
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - coverageAmount
+              properties:
+                type:
+                  type: string
+                  enum: [AUTO, HOME, LIFE, HEALTH, BUSINESS]
+                  example: AUTO
+                coverageAmount:
+                  type: number
+                  format: decimal
+                  example: 50000
+                  description: Desired coverage amount in dollars
+      responses:
+        '200':
+          description: Premium calculated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        example: AUTO
+                      coverageAmount:
+                        type: number
+                        example: 50000
+                      estimatedPremium:
+                        type: number
+                        example: 750.00
+                        description: Calculated annual premium
+                      calculatedAt:
+                        type: string
+                        format: date-time
+                  message:
+                    type: string
+                    example: Premium calculated successfully
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/quotes/my/quotes:
+    get:
+      tags:
+        - Quotes
+        - User-Scoped
+      summary: Get my quotes
+      description: |
+        Retrieve quotes for the authenticated user only. 
+        Automatically filters by userId from JWT token.
+        Supports same filtering/pagination as GET /quotes but scoped to current user.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, EXPIRED, CONVERTED]
+          description: Filter by quote status
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+          description: Number of results per page
+      responses:
+        '200':
+          description: User quotes retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Quote'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                        example: 1
+                      limit:
+                        type: integer
+                        example: 50
+                      total:
+                        type: integer
+                        example: 23
+                      pages:
+                        type: integer
+                        example: 1
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
 components:
   responses:
     UnauthorizedError:
@@ -525,3 +718,4 @@ components:
         metadata:
           type: object
           nullable: true
+

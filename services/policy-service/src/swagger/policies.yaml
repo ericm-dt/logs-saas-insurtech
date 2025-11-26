@@ -344,6 +344,153 @@ paths:
         '404':
           $ref: '#/components/responses/NotFoundError'
 
+
+  /api/policies/{id}/file-claim:
+    post:
+      tags:
+        - Policies
+        - Workflows
+      summary: File claim from policy
+      description: |
+        File an insurance claim against an active policy. This is a workflow endpoint that:
+        - Validates policy exists and is ACTIVE
+        - Auto-fills policyId and userId from policy
+        - Creates claim in SUBMITTED status
+        - Cross-service call to claims-service
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Policy UUID to file claim against
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - incidentDate
+                - description
+                - claimAmount
+              properties:
+                incidentDate:
+                  type: string
+                  format: date
+                  example: '2025-11-20'
+                  description: Date the incident occurred
+                description:
+                  type: string
+                  example: Rear-end collision at stoplight
+                  description: Detailed description of the claim
+                claimAmount:
+                  type: number
+                  format: decimal
+                  example: 3500.00
+                  description: Requested claim amount
+      responses:
+        '201':
+          description: Claim filed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    description: Newly created claim
+                  message:
+                    type: string
+                    example: Claim filed successfully
+        '400':
+          description: Policy is not ACTIVE or validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Claims can only be filed on ACTIVE policies
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/policies/my/policies:
+    get:
+      tags:
+        - Policies
+        - User-Scoped
+      summary: Get my policies
+      description: |
+        Retrieve policies for the authenticated user only. 
+        Automatically filters by userId from JWT token.
+        Supports same filtering/pagination as GET /policies but scoped to current user.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, INACTIVE, PENDING, CANCELLED, EXPIRED]
+          description: Filter by policy status
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+          description: Number of results per page
+      responses:
+        '200':
+          description: User policies retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Policy'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                        example: 1
+                      limit:
+                        type: integer
+                        example: 50
+                      total:
+                        type: integer
+                        example: 12
+                      pages:
+                        type: integer
+                        example: 1
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
 components:
   responses:
     UnauthorizedError:
@@ -472,3 +619,4 @@ components:
         metadata:
           type: object
           nullable: true
+

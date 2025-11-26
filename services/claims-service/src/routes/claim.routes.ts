@@ -382,6 +382,179 @@ router.put(
   }
 );
 
+// Approve claim (workflow action)
+router.post('/:id/approve', authenticate, param('id').isUUID(), validate([
+  body('approvedAmount').isNumeric().withMessage('Approved amount must be numeric'),
+  body('reason').optional().isString().withMessage('Reason must be string')
+]), async (req: AuthRequest, res): Promise<void> => {
+  try {
+    const { approvedAmount, reason } = req.body;
+    
+    const currentClaim = await prisma.claim.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!currentClaim) {
+      res.status(404).json({
+        success: false,
+        message: 'Claim not found'
+      });
+      return;
+    }
+
+    if (currentClaim.status !== 'UNDER_REVIEW') {
+      res.status(400).json({
+        success: false,
+        message: 'Only claims under review can be approved'
+      });
+      return;
+    }
+
+    const result = await prisma.$transaction(async (tx: any) => {
+      const updatedClaim = await tx.claim.update({
+        where: { id: req.params.id },
+        data: {
+          status: 'APPROVED',
+          approvedAmount
+        }
+      });
+
+      await tx.claimStatusHistory.create({
+        data: {
+          claimId: req.params.id,
+          organizationId: currentClaim.organizationId,
+          oldStatus: currentClaim.status,
+          newStatus: 'APPROVED',
+          changedBy: (req as AuthRequest).user!.userId,
+          reason: reason || 'Claim approved',
+          metadata: { approvedAmount }
+        }
+      });
+
+      return updatedClaim;
+    });
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Claim approved successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to approve claim'
+    });
+  }
+});
+
+// Deny claim (workflow action)
+router.post('/:id/deny', authenticate, param('id').isUUID(), validate([
+  body('reason').notEmpty().withMessage('Denial reason is required')
+]), async (req: AuthRequest, res): Promise<void> => {
+  try {
+    const { reason } = req.body;
+    
+    const currentClaim = await prisma.claim.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!currentClaim) {
+      res.status(404).json({
+        success: false,
+        message: 'Claim not found'
+      });
+      return;
+    }
+
+    if (!['SUBMITTED', 'UNDER_REVIEW'].includes(currentClaim.status)) {
+      res.status(400).json({
+        success: false,
+        message: 'Only submitted or under-review claims can be denied'
+      });
+      return;
+    }
+
+    const result = await prisma.$transaction(async (tx: any) => {
+      const updatedClaim = await tx.claim.update({
+        where: { id: req.params.id },
+        data: {
+          status: 'DENIED',
+          denialReason: reason
+        }
+      });
+
+      await tx.claimStatusHistory.create({
+        data: {
+          claimId: req.params.id,
+          organizationId: currentClaim.organizationId,
+          oldStatus: currentClaim.status,
+          newStatus: 'DENIED',
+          changedBy: (req as AuthRequest).user!.userId,
+          reason,
+          metadata: { denialReason: reason }
+        }
+      });
+
+      return updatedClaim;
+    });
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Claim denied'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to deny claim'
+    });
+  }
+});
+
+// Get my claims (user-scoped endpoint)
+router.get('/my/claims', authenticate, async (req: AuthRequest, res): Promise<void> => {
+  try {
+    const { status, page = '1', limit = '50' } = req.query;
+    
+    const where: any = {
+      userId: (req as AuthRequest).user!.userId,
+      organizationId: (req as AuthRequest).user!.organizationId
+    };
+
+    if (status) where.status = status;
+
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    const [claims, total] = await Promise.all([
+      prisma.claim.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum
+      }),
+      prisma.claim.count({ where })
+    ]);
+
+    res.json({
+      success: true,
+      data: claims,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch your claims'
+    });
+  }
+});
+
 // Delete claim
 router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
   try {

@@ -314,6 +314,116 @@ router.put(
   }
 );
 
+// File claim from policy (workflow endpoint)
+router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
+  body('incidentDate').isISO8601().withMessage('Valid incident date required'),
+  body('description').notEmpty().withMessage('Description is required'),
+  body('claimAmount').isNumeric().withMessage('Claim amount must be numeric')
+]), async (req: AuthRequest, res): Promise<void> => {
+  try {
+    const policy = await prisma.policy.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!policy) {
+      res.status(404).json({
+        success: false,
+        message: 'Policy not found'
+      });
+      return;
+    }
+
+    if (policy.status !== 'ACTIVE') {
+      res.status(400).json({
+        success: false,
+        message: 'Claims can only be filed on ACTIVE policies'
+      });
+      return;
+    }
+
+    const { incidentDate, description, claimAmount } = req.body;
+
+    // Call claims service to create claim
+    const CLAIMS_SERVICE_URL = process.env.CLAIMS_SERVICE_URL || 'http://localhost:3004';
+    const token = req.headers.authorization?.substring(7) || '';
+
+    try {
+      const claimResponse = await axios.post(
+        `${CLAIMS_SERVICE_URL}/api/claims`,
+        {
+          userId: policy.userId,
+          policyId: policy.id,
+          claimNumber: `CLM-${Date.now()}`,
+          incidentDate,
+          description,
+          claimAmount
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      res.status(201).json({
+        success: true,
+        data: claimResponse.data.data,
+        message: 'Claim filed successfully'
+      });
+    } catch (claimError) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create claim'
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to file claim'
+    });
+  }
+});
+
+// Get my policies (user-scoped endpoint)
+router.get('/my/policies', authenticate, async (req: AuthRequest, res): Promise<void> => {
+  try {
+    const { status, page = '1', limit = '50' } = req.query;
+    
+    const where: any = {
+      userId: (req as AuthRequest).user!.userId,
+      organizationId: (req as AuthRequest).user!.organizationId
+    };
+
+    if (status) where.status = status;
+
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    const [policies, total] = await Promise.all([
+      prisma.policy.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum
+      }),
+      prisma.policy.count({ where })
+    ]);
+
+    res.json({
+      success: true,
+      data: policies,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch your policies'
+    });
+  }
+});
+
 // Delete policy
 router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
   try {

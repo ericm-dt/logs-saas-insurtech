@@ -357,7 +357,157 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
       message: 'Failed to delete quote'
     });
   }
-});// Expire old quotes (utility endpoint)
+});// Convert quote to policy (workflow endpoint)
+router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
+  try {
+    const quote = await prisma.quote.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!quote) {
+      res.status(404).json({
+        success: false,
+        message: 'Quote not found'
+      });
+      return;
+    }
+
+    if (quote.status !== 'ACTIVE') {
+      res.status(400).json({
+        success: false,
+        message: 'Only ACTIVE quotes can be converted to policies'
+      });
+      return;
+    }
+
+    if (new Date() > quote.expiresAt) {
+      res.status(400).json({
+        success: false,
+        message: 'Quote has expired'
+      });
+      return;
+    }
+
+    // Call policy service to create policy
+    const POLICY_SERVICE_URL = process.env.POLICY_SERVICE_URL || 'http://localhost:3003';
+    const token = req.headers.authorization?.substring(7) || '';
+
+    try {
+      const policyResponse = await axios.post(
+        `${POLICY_SERVICE_URL}/api/policies`,
+        {
+          userId: quote.userId,
+          policyNumber: `POL-${Date.now()}`,
+          type: quote.type,
+          startDate: new Date().toISOString(),
+          endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
+          premium: quote.premium,
+          coverageAmount: quote.coverageAmount,
+          status: 'ACTIVE'
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Update quote status to CONVERTED
+      const updatedQuote = await prisma.quote.update({
+        where: { id: req.params.id },
+        data: { status: 'CONVERTED' }
+      });
+
+      res.status(201).json({
+        success: true,
+        data: {
+          quote: updatedQuote,
+          policy: policyResponse.data.data
+        },
+        message: 'Quote successfully converted to policy'
+      });
+    } catch (policyError) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create policy from quote'
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to convert quote'
+    });
+  }
+});
+
+// Calculate premium without creating quote (pre-quote workflow)
+router.post('/calculate', authenticate, validate([
+  body('type').isIn(['AUTO', 'HOME', 'LIFE', 'HEALTH', 'BUSINESS']).withMessage('Invalid policy type'),
+  body('coverageAmount').isNumeric().withMessage('Coverage amount must be numeric')
+]), async (req: AuthRequest, res): Promise<void> => {
+  try {
+    const { type, coverageAmount } = req.body;
+    const premium = calculatePremium(parseFloat(coverageAmount), type);
+
+    res.json({
+      success: true,
+      data: {
+        type,
+        coverageAmount: parseFloat(coverageAmount),
+        estimatedPremium: premium,
+        calculatedAt: new Date().toISOString()
+      },
+      message: 'Premium calculated successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to calculate premium'
+    });
+  }
+});
+
+// Get my quotes (user-scoped endpoint)
+router.get('/my/quotes', authenticate, async (req: AuthRequest, res): Promise<void> => {
+  try {
+    const { status, page = '1', limit = '50' } = req.query;
+    
+    const where: any = {
+      userId: (req as AuthRequest).user!.userId,
+      organizationId: (req as AuthRequest).user!.organizationId
+    };
+
+    if (status) where.status = status;
+
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    const [quotes, total] = await Promise.all([
+      prisma.quote.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum
+      }),
+      prisma.quote.count({ where })
+    ]);
+
+    res.json({
+      success: true,
+      data: quotes,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch your quotes'
+    });
+  }
+});
+
+// Expire old quotes (utility endpoint)
 router.post('/expire-old', authenticate, async (req: AuthRequest, res): Promise<void> => {
   try {
     const now = new Date();
