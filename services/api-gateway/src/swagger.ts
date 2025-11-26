@@ -41,6 +41,7 @@ async function aggregateSpecs() {
           },
         },
         schemas: {},
+        responses: {},
       },
       tags: [],
     };
@@ -59,6 +60,10 @@ async function aggregateSpecs() {
       
       if (spec.components?.schemas) {
         Object.assign(aggregatedSpec.components.schemas, spec.components.schemas);
+      }
+      
+      if (spec.components?.responses) {
+        Object.assign(aggregatedSpec.components.responses, spec.components.responses);
       }
       
       if (spec.tags) {

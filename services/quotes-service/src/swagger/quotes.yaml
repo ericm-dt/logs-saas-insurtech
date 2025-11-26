@@ -399,3 +399,129 @@ paths:
           $ref: '#/components/responses/UnauthorizedError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
+
+components:
+  responses:
+    UnauthorizedError:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: Unauthorized
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: Validation failed
+              errors:
+                type: array
+                items:
+                  type: object
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: Not found
+    ForbiddenError:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: Forbidden
+  schemas:
+    Quote:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        quoteNumber:
+          type: string
+        type:
+          type: string
+          enum: [AUTO, HOME, LIFE, HEALTH, BUSINESS]
+        status:
+          type: string
+          enum: [ACTIVE, EXPIRED, CONVERTED]
+        coverageAmount:
+          type: number
+          format: decimal
+        premium:
+          type: number
+          format: decimal
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    QuoteStatusHistory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        quoteId:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        oldStatus:
+          type: string
+          enum: [ACTIVE, EXPIRED, CONVERTED]
+          nullable: true
+        newStatus:
+          type: string
+          enum: [ACTIVE, EXPIRED, CONVERTED]
+        changedBy:
+          type: string
+          format: uuid
+        changedAt:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
