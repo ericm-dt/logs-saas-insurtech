@@ -79,6 +79,7 @@ const proxyOptions = {
 // Route to services
 app.use('/api/v1/auth', createProxyMiddleware({ ...proxyOptions, target: USER_SERVICE_URL }));
 app.use('/api/v1/users', createProxyMiddleware({ ...proxyOptions, target: USER_SERVICE_URL }));
+app.use('/api/v1/organizations', createProxyMiddleware({ ...proxyOptions, target: USER_SERVICE_URL }));
 app.use('/api/v1/policies', createProxyMiddleware({ ...proxyOptions, target: POLICY_SERVICE_URL }));
 app.use('/api/v1/claims', createProxyMiddleware({ ...proxyOptions, target: CLAIMS_SERVICE_URL }));
 app.use('/api/v1/quotes', createProxyMiddleware({ ...proxyOptions, target: QUOTES_SERVICE_URL }));
@@ -96,6 +97,7 @@ app.get('/', (req: Request, res: Response) => {
       docsJson: '/api-docs.json',
       auth: '/api/v1/auth',
       users: '/api/v1/users',
+      organizations: '/api/v1/organizations',
       policies: '/api/v1/policies',
       claims: '/api/v1/claims',
       quotes: '/api/v1/quotes',

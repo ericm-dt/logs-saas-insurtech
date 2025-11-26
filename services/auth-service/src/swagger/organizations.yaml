@@ -1,0 +1,341 @@
+paths:
+  /api/organizations:
+    get:
+      tags:
+        - Organizations
+      summary: Get all organizations
+      description: Retrieve a list of all organizations with user counts
+      responses:
+        '200':
+          description: List of organizations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OrganizationWithCount'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/organizations/{id}:
+    get:
+      tags:
+        - Organizations
+      summary: Get organization by ID
+      description: Retrieve detailed information about a specific organization
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Organization ID
+      responses:
+        '200':
+          description: Organization retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/OrganizationWithCount'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags:
+        - Organizations
+      summary: Update organization
+      description: Update organization details (name, slug, or plan)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Organization ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Acme Insurance Corp"
+                  description: Organization display name
+                slug:
+                  type: string
+                  example: "acme-insurance"
+                  description: Unique URL-friendly identifier
+                plan:
+                  type: string
+                  enum: [free, starter, professional, enterprise]
+                  description: Subscription plan
+      responses:
+        '200':
+          description: Organization updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/OrganizationWithCount'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Organizations
+      summary: Delete organization
+      description: Delete an organization (only allowed if no users exist)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Organization ID
+      responses:
+        '200':
+          description: Organization deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Organization deleted"
+        '400':
+          description: Cannot delete organization with existing users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Cannot delete organization with 5 user(s). Remove users first."
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/organizations/slug/{slug}:
+    get:
+      tags:
+        - Organizations
+      summary: Get organization by slug
+      description: Retrieve organization information using its unique slug identifier
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Organization slug (URL-friendly identifier)
+          example: "acme-insurance"
+      responses:
+        '200':
+          description: Organization retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/OrganizationWithCount'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/organizations/{id}/users:
+    get:
+      tags:
+        - Organizations
+      summary: Get organization users
+      description: Retrieve all users belonging to a specific organization
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Organization ID
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserWithOrgRole'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/organizations/{id}/stats:
+    get:
+      tags:
+        - Organizations
+      summary: Get organization statistics
+      description: Retrieve statistics about an organization including user counts by role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Organization ID
+      responses:
+        '200':
+          description: Statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      organization:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          name:
+                            type: string
+                            example: "Acme Insurance Corp"
+                          slug:
+                            type: string
+                            example: "acme-insurance"
+                          plan:
+                            type: string
+                            enum: [free, starter, professional, enterprise]
+                          createdAt:
+                            type: string
+                            format: date-time
+                      totalUsers:
+                        type: integer
+                        example: 15
+                      usersByRole:
+                        type: object
+                        properties:
+                          ADMIN:
+                            type: integer
+                            example: 2
+                          AGENT:
+                            type: integer
+                            example: 8
+                          CUSTOMER:
+                            type: integer
+                            example: 5
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    OrganizationWithCount:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          example: "Acme Insurance Corp"
+        slug:
+          type: string
+          example: "acme-insurance"
+        plan:
+          type: string
+          enum: [free, starter, professional, enterprise]
+          example: "professional"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        _count:
+          type: object
+          properties:
+            users:
+              type: integer
+              example: 15
+
+    UserWithOrgRole:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, AGENT, CUSTOMER]
+        orgRole:
+          type: string
+          enum: [OWNER, ADMIN, MEMBER]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time

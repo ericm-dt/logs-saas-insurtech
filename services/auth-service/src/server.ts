@@ -4,6 +4,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
+import organizationRoutes from './routes/organization.routes';
 import { setupSwagger } from './swagger';
 
 dotenv.config();
@@ -23,6 +24,7 @@ setupSwagger(app);
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/organizations', organizationRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

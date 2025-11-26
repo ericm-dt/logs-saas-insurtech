@@ -204,6 +204,10 @@ const options: swaggerJsdoc.Options = {
         description: 'User authentication and registration',
       },
       {
+        name: 'Organizations',
+        description: 'Organization management operations',
+      },
+      {
         name: 'Users',
         description: 'User management operations',
       },
