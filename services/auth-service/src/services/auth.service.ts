@@ -7,6 +7,8 @@ interface AuthTokenPayload {
   userId: string;
   email: string;
   role: string;
+  organizationId: string;
+  orgRole: string;
 }
 
 export class AuthService {
@@ -15,7 +17,9 @@ export class AuthService {
     password: string, 
     firstName: string, 
     lastName: string, 
+    organizationId: string,
     role: UserRole = UserRole.CUSTOMER,
+    orgRole: 'OWNER' | 'ADMIN' | 'MEMBER' = 'MEMBER',
     customerData?: {
       dateOfBirth?: Date;
       phone?: string;
@@ -31,6 +35,14 @@ export class AuthService {
       throw new Error('User already exists');
     }
 
+    // Verify organization exists
+    const organization = await prisma.organization.findUnique({ 
+      where: { id: organizationId } 
+    });
+    if (!organization) {
+      throw new Error('Organization not found');
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     
     const user = await prisma.user.create({
@@ -40,6 +52,8 @@ export class AuthService {
         firstName,
         lastName,
         role,
+        orgRole: orgRole as any,
+        organizationId,
         ...(customerData && {
           dateOfBirth: customerData.dateOfBirth,
           phone: customerData.phone,
@@ -53,7 +67,13 @@ export class AuthService {
     });
 
     const { password: _, ...userWithoutPassword } = user;
-    const token = this.generateToken({ userId: user.id, email: user.email, role: user.role });
+    const token = this.generateToken({ 
+      userId: user.id, 
+      email: user.email, 
+      role: user.role,
+      organizationId: user.organizationId,
+      orgRole: user.orgRole
+    });
 
     return { user: userWithoutPassword, token };
   }
@@ -70,7 +90,13 @@ export class AuthService {
     }
 
     const { password: _, ...userWithoutPassword } = user;
-    const token = this.generateToken({ userId: user.id, email: user.email, role: user.role });
+    const token = this.generateToken({ 
+      userId: user.id, 
+      email: user.email, 
+      role: user.role,
+      organizationId: user.organizationId,
+      orgRole: user.orgRole
+    });
 
     return { user: userWithoutPassword, token };
   }

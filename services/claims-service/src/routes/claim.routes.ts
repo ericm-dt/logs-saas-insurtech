@@ -157,6 +157,7 @@ router.post(
       const claim = await prisma.claim.create({
         data: {
           userId,
+          organizationId: (req as AuthRequest).user!.organizationId,
           policyId,
           claimNumber,
           incidentDate: new Date(incidentDate),

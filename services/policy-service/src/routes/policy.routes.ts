@@ -115,9 +115,9 @@ router.post(
         return;
       }
 
-      const policy = await prisma.policy.create({
-        data: {
+      const policy = await prisma.policy.create({        data: {
           userId,
+          organizationId: (req as AuthRequest).user!.organizationId,
           policyNumber,
           type,
           status: status || 'PENDING',

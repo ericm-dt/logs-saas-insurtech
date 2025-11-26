@@ -19,6 +19,7 @@ enum ClaimStatus {
 model Claim {
   id              String      @id @default(uuid())
   userId          String      // Reference to user in user-service
+  organizationId  String      // Reference to organization in user-service
   policyId        String      // Reference to policy in policy-service
   claimNumber     String      @unique
   status          ClaimStatus @default(SUBMITTED)
@@ -31,6 +32,7 @@ model Claim {
   updatedAt       DateTime    @updatedAt
 
   @@index([userId])
+  @@index([organizationId])
   @@index([policyId])
   @@index([claimNumber])
   @@index([status])

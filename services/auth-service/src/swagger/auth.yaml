@@ -1,4 +1,53 @@
 paths:
+  /api/auth/organizations:
+    post:
+      tags:
+        - Authentication
+      summary: Create a new organization
+      description: Create a new organization (typically done during initial setup or admin invitation)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+              properties:
+                name:
+                  type: string
+                  example: "Acme Insurance Corp"
+                  description: Organization display name
+                slug:
+                  type: string
+                  example: "acme-insurance"
+                  description: Unique URL-friendly identifier
+                plan:
+                  type: string
+                  enum: [free, starter, professional, enterprise]
+                  default: free
+                  description: Subscription plan
+      responses:
+        '201':
+          description: Organization created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Organization'
+        '400':
+          description: Validation error or slug already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/ValidationError'
+
   /api/auth/register:
     post:
       tags:
@@ -16,6 +65,7 @@ paths:
                 - password
                 - firstName
                 - lastName
+                - organizationId
               properties:
                 email:
                   type: string
@@ -32,10 +82,20 @@ paths:
                 lastName:
                   type: string
                   example: Doe
+                organizationId:
+                  type: string
+                  format: uuid
+                  description: ID of the organization to join
+                  example: "550e8400-e29b-41d4-a716-446655440000"
                 role:
                   type: string
                   enum: [ADMIN, AGENT, CUSTOMER]
                   default: CUSTOMER
+                orgRole:
+                  type: string
+                  enum: [OWNER, ADMIN, MEMBER]
+                  default: MEMBER
+                  description: Role within the organization
       responses:
         '201':
           description: User registered successfully

@@ -25,6 +25,7 @@ enum QuoteStatus {
 model Quote {
   id              String      @id @default(uuid())
   userId          String      // Reference to user in user-service
+  organizationId  String      // Reference to organization in user-service
   quoteNumber     String      @unique
   type            PolicyType
   status          QuoteStatus @default(ACTIVE)
@@ -35,6 +36,7 @@ model Quote {
   updatedAt       DateTime    @updatedAt
 
   @@index([userId])
+  @@index([organizationId])
   @@index([quoteNumber])
   @@index([status])
   @@index([expiresAt])

@@ -14,14 +14,37 @@ enum UserRole {
   CUSTOMER
 }
 
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  plan      String   @default("free") // free, starter, professional, enterprise
+  status    String   @default("active") // active, suspended, cancelled
+  settings  Json?    // Store org-level settings as JSON
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users User[]
+
+  @@map("organizations")
+}
+
 model User {
-  id             String    @id @default(uuid())
-  email          String    @unique
+  id             String           @id @default(uuid())
+  email          String           @unique
   password       String
   firstName      String
   lastName       String
-  role           UserRole  @default(CUSTOMER)
-  organizationId String?
+  role           UserRole         @default(CUSTOMER)
+  orgRole        OrganizationRole @default(MEMBER)
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   // Customer-specific fields
   dateOfBirth    DateTime?
   phone          String?
@@ -29,9 +52,10 @@ model User {
   city           String?
   state          String?
   zipCode        String?
-  country        String    @default("USA")
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  country        String           @default("USA")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
+  @@index([organizationId])
   @@map("users")
 }

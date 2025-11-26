@@ -24,19 +24,21 @@ enum PolicyStatus {
 }
 
 model Policy {
-  id            String       @id @default(uuid())
-  userId        String       // Reference to user in user-service
-  policyNumber  String       @unique
-  type          PolicyType
-  status        PolicyStatus @default(PENDING)
-  startDate     DateTime
-  endDate       DateTime
-  premium       Decimal      @db.Decimal(10, 2)
-  coverageAmount Decimal     @db.Decimal(12, 2)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id             String       @id @default(uuid())
+  userId         String       // Reference to user in user-service
+  organizationId String       // Reference to organization in user-service
+  policyNumber   String       @unique
+  type           PolicyType
+  status         PolicyStatus @default(PENDING)
+  startDate      DateTime
+  endDate        DateTime
+  premium        Decimal      @db.Decimal(10, 2)
+  coverageAmount Decimal      @db.Decimal(12, 2)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@index([userId])
+  @@index([organizationId])
   @@index([policyNumber])
   @@index([status])
 }

@@ -125,6 +125,14 @@ const options: swaggerJsdoc.Options = {
               type: 'string',
               enum: ['ADMIN', 'AGENT', 'CUSTOMER'],
             },
+            orgRole: {
+              type: 'string',
+              enum: ['OWNER', 'ADMIN', 'MEMBER'],
+            },
+            organizationId: {
+              type: 'string',
+              format: 'uuid',
+            },
             dateOfBirth: {
               type: 'string',
               format: 'date',
@@ -146,6 +154,37 @@ const options: swaggerJsdoc.Options = {
             },
             country: {
               type: 'string',
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
+            },
+          },
+        },
+        Organization: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            name: {
+              type: 'string',
+            },
+            slug: {
+              type: 'string',
+            },
+            plan: {
+              type: 'string',
+              enum: ['free', 'starter', 'professional', 'enterprise'],
+            },
+            status: {
+              type: 'string',
+              enum: ['active', 'suspended', 'cancelled'],
             },
             createdAt: {
               type: 'string',

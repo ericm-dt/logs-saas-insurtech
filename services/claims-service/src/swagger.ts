@@ -123,6 +123,10 @@ const swaggerSpec = {
             type: 'string',
             format: 'uuid',
           },
+          organizationId: {
+            type: 'string',
+            format: 'uuid',
+          },
           policyId: {
             type: 'string',
             format: 'uuid',

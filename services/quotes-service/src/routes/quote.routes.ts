@@ -138,6 +138,7 @@ router.post(
       const quote = await prisma.quote.create({
         data: {
           userId,
+          organizationId: (req as AuthRequest).user!.organizationId,
           quoteNumber,
           type,
           coverageAmount,
