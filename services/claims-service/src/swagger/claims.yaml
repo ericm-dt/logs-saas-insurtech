@@ -4,9 +4,68 @@ paths:
       tags:
         - Claims
       summary: Get all claims
-      description: Retrieve a list of all insurance claims
+      description: Retrieve a list of all insurance claims with optional filters
       security:
         - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [SUBMITTED, UNDER_REVIEW, APPROVED, DENIED, PAID]
+          description: Filter by claim status
+        - name: policyId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by policy ID
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by user ID (customer)
+        - name: incidentDateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter claims with incident date after this date
+        - name: incidentDateTo
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter claims with incident date before this date
+        - name: minClaimAmount
+          in: query
+          schema:
+            type: number
+          description: Minimum claim amount
+        - name: maxClaimAmount
+          in: query
+          schema:
+            type: number
+          description: Maximum claim amount
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by claim number or description (case-insensitive)
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+          description: Number of results per page
       responses:
         '200':
           description: List of claims retrieved successfully
@@ -22,6 +81,21 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Claim'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                        example: 1
+                      limit:
+                        type: integer
+                        example: 50
+                      total:
+                        type: integer
+                        example: 150
+                      pages:
+                        type: integer
+                        example: 3
         '401':
           $ref: '#/components/responses/UnauthorizedError'
     

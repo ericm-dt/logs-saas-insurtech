@@ -64,13 +64,74 @@ async function validateUser(userId: string, token: string): Promise<boolean> {
 // Get all claims
 router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
   try {
-    const claims = await prisma.claim.findMany({
-      orderBy: { createdAt: 'desc' }
-    });
+    const {
+      status,
+      policyId,
+      userId,
+      incidentDateFrom,
+      incidentDateTo,
+      minClaimAmount,
+      maxClaimAmount,
+      search,
+      page = '1',
+      limit = '50'
+    } = req.query;
+
+    // Build dynamic where clause
+    const where: any = {
+      organizationId: (req as AuthRequest).user!.organizationId // Multi-tenant filter
+    };
+
+    if (status) where.status = status;
+    if (policyId) where.policyId = policyId;
+    if (userId) where.userId = userId;
+
+    // Incident date range
+    if (incidentDateFrom || incidentDateTo) {
+      where.incidentDate = {};
+      if (incidentDateFrom) where.incidentDate.gte = new Date(incidentDateFrom as string);
+      if (incidentDateTo) where.incidentDate.lte = new Date(incidentDateTo as string);
+    }
+
+    // Claim amount range
+    if (minClaimAmount || maxClaimAmount) {
+      where.claimAmount = {};
+      if (minClaimAmount) where.claimAmount.gte = parseFloat(minClaimAmount as string);
+      if (maxClaimAmount) where.claimAmount.lte = parseFloat(maxClaimAmount as string);
+    }
+
+    // Search by claim number or description
+    if (search) {
+      where.OR = [
+        { claimNumber: { contains: search as string, mode: 'insensitive' } },
+        { description: { contains: search as string, mode: 'insensitive' } }
+      ];
+    }
+
+    // Pagination
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    const [claims, total] = await Promise.all([
+      prisma.claim.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum
+      }),
+      prisma.claim.count({ where })
+    ]);
 
     res.json({
       success: true,
-      data: claims
+      data: claims,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum)
+      }
     });
   } catch (error) {
     res.status(500).json({

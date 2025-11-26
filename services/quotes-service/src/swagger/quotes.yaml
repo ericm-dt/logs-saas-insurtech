@@ -4,9 +4,78 @@ paths:
       tags:
         - Quotes
       summary: Get all quotes
-      description: Retrieve a list of all insurance quotes
+      description: Retrieve a list of all insurance quotes with optional filters
       security:
         - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, EXPIRED, CONVERTED]
+          description: Filter by quote status
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [AUTO, HOME, LIFE, HEALTH, BUSINESS]
+          description: Filter by insurance type
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by user ID
+        - name: expiresAfter
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter quotes expiring after this date
+        - name: expiresBefore
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter quotes expiring before this date
+        - name: minCoverage
+          in: query
+          schema:
+            type: number
+          description: Minimum coverage amount
+        - name: maxCoverage
+          in: query
+          schema:
+            type: number
+          description: Maximum coverage amount
+        - name: minPremium
+          in: query
+          schema:
+            type: number
+          description: Minimum premium amount
+        - name: maxPremium
+          in: query
+          schema:
+            type: number
+          description: Maximum premium amount
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by quote number (case-insensitive)
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+          description: Number of results per page
       responses:
         '200':
           description: List of quotes retrieved successfully
@@ -22,6 +91,21 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Quote'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                        example: 1
+                      limit:
+                        type: integer
+                        example: 50
+                      total:
+                        type: integer
+                        example: 320
+                      pages:
+                        type: integer
+                        example: 7
         '401':
           $ref: '#/components/responses/UnauthorizedError'
     

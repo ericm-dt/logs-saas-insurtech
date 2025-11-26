@@ -58,13 +58,83 @@ function calculatePremium(coverageAmount: number, type: string): number {
 // Get all quotes
 router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
   try {
-    const quotes = await prisma.quote.findMany({
-      orderBy: { createdAt: 'desc' }
-    });
+    const {
+      status,
+      type,
+      userId,
+      expiresAfter,
+      expiresBefore,
+      minCoverage,
+      maxCoverage,
+      minPremium,
+      maxPremium,
+      search,
+      page = '1',
+      limit = '50'
+    } = req.query;
+
+    // Build dynamic where clause
+    const where: any = {
+      organizationId: (req as AuthRequest).user!.organizationId // Multi-tenant filter
+    };
+
+    if (status) where.status = status;
+    if (type) where.type = type;
+    if (userId) where.userId = userId;
+
+    // Expiration date filters
+    if (expiresAfter || expiresBefore) {
+      where.expiresAt = {};
+      if (expiresAfter) where.expiresAt.gte = new Date(expiresAfter as string);
+      if (expiresBefore) where.expiresAt.lte = new Date(expiresBefore as string);
+    }
+
+    // Coverage amount range
+    if (minCoverage || maxCoverage) {
+      where.coverageAmount = {};
+      if (minCoverage) where.coverageAmount.gte = parseFloat(minCoverage as string);
+      if (maxCoverage) where.coverageAmount.lte = parseFloat(maxCoverage as string);
+    }
+
+    // Premium range
+    if (minPremium || maxPremium) {
+      where.premium = {};
+      if (minPremium) where.premium.gte = parseFloat(minPremium as string);
+      if (maxPremium) where.premium.lte = parseFloat(maxPremium as string);
+    }
+
+    // Search by quote number
+    if (search) {
+      where.quoteNumber = {
+        contains: search as string,
+        mode: 'insensitive'
+      };
+    }
+
+    // Pagination
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    const [quotes, total] = await Promise.all([
+      prisma.quote.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum
+      }),
+      prisma.quote.count({ where })
+    ]);
 
     res.json({
       success: true,
-      data: quotes
+      data: quotes,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum)
+      }
     });
   } catch (error) {
     res.status(500).json({

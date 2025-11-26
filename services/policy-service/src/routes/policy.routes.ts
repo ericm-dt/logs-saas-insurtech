@@ -43,13 +43,82 @@ async function validateUser(userId: string, token: string): Promise<boolean> {
 // Get all policies
 router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
   try {
-    const policies = await prisma.policy.findMany({
-      orderBy: { createdAt: 'desc' }
-    });
+    const { 
+      status, 
+      type, 
+      userId, 
+      startDateFrom, 
+      startDateTo,
+      endDateFrom,
+      endDateTo,
+      minPremium,
+      maxPremium,
+      search,
+      page = '1',
+      limit = '50'
+    } = req.query;
+
+    // Build dynamic where clause
+    const where: any = {
+      organizationId: (req as AuthRequest).user!.organizationId // Multi-tenant filter
+    };
+
+    if (status) where.status = status;
+    if (type) where.type = type;
+    if (userId) where.userId = userId;
+    
+    // Date range filters
+    if (startDateFrom || startDateTo) {
+      where.startDate = {};
+      if (startDateFrom) where.startDate.gte = new Date(startDateFrom as string);
+      if (startDateTo) where.startDate.lte = new Date(startDateTo as string);
+    }
+    
+    if (endDateFrom || endDateTo) {
+      where.endDate = {};
+      if (endDateFrom) where.endDate.gte = new Date(endDateFrom as string);
+      if (endDateTo) where.endDate.lte = new Date(endDateTo as string);
+    }
+
+    // Premium range
+    if (minPremium || maxPremium) {
+      where.premium = {};
+      if (minPremium) where.premium.gte = parseFloat(minPremium as string);
+      if (maxPremium) where.premium.lte = parseFloat(maxPremium as string);
+    }
+
+    // Search by policy number
+    if (search) {
+      where.policyNumber = {
+        contains: search as string,
+        mode: 'insensitive'
+      };
+    }
+
+    // Pagination
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    const [policies, total] = await Promise.all([
+      prisma.policy.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum
+      }),
+      prisma.policy.count({ where })
+    ]);
 
     res.json({
       success: true,
-      data: policies
+      data: policies,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum)
+      }
     });
   } catch (error) {
     res.status(500).json({

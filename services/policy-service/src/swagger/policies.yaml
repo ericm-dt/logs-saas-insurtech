@@ -4,9 +4,80 @@ paths:
       tags:
         - Policies
       summary: Get all policies
-      description: Retrieve a list of all insurance policies
+      description: Retrieve a list of all insurance policies with optional filters
       security:
         - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, INACTIVE, PENDING, CANCELLED, EXPIRED]
+          description: Filter by policy status
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [AUTO, HOME, LIFE, HEALTH, BUSINESS]
+          description: Filter by policy type
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by user ID
+        - name: startDateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter policies starting after this date
+        - name: startDateTo
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter policies starting before this date
+        - name: endDateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter policies ending after this date
+        - name: endDateTo
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter policies ending before this date
+        - name: minPremium
+          in: query
+          schema:
+            type: number
+          description: Minimum premium amount
+        - name: maxPremium
+          in: query
+          schema:
+            type: number
+          description: Maximum premium amount
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by policy number (case-insensitive)
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+          description: Number of results per page
       responses:
         '200':
           description: List of policies retrieved successfully
@@ -22,6 +93,21 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Policy'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                        example: 1
+                      limit:
+                        type: integer
+                        example: 50
+                      total:
+                        type: integer
+                        example: 250
+                      pages:
+                        type: integer
+                        example: 5
         '401':
           $ref: '#/components/responses/UnauthorizedError'
     
