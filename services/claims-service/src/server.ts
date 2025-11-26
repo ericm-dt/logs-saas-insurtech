@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import claimRoutes from './routes/claim.routes';
+import { setupSwagger } from './swagger';
 
 dotenv.config();
 
@@ -11,11 +12,16 @@ const app = express();
 const PORT = process.env.PORT || 3004;
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false,
+}));
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined'));
+
+// Setup Swagger
+setupSwagger(app);
 
 // Health check
 app.get('/health', (req, res) => {

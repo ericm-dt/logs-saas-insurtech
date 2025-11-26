@@ -1,0 +1,230 @@
+paths:
+  /api/quotes:
+    get:
+      tags:
+        - Quotes
+      summary: Get all quotes
+      description: Retrieve a list of all insurance quotes
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of quotes retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Quote'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    
+    post:
+      tags:
+        - Quotes
+      summary: Create a new quote
+      description: Generate a new insurance quote for a customer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - type
+                - coverageAmount
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                  example: 123e4567-e89b-12d3-a456-426614174000
+                type:
+                  type: string
+                  enum: [AUTO, HOME, LIFE, HEALTH, BUSINESS]
+                  example: AUTO
+                coverageAmount:
+                  type: number
+                  format: decimal
+                  example: 50000.00
+                  description: Desired coverage amount
+                status:
+                  type: string
+                  enum: [PENDING, ACCEPTED, REJECTED, EXPIRED]
+                  default: PENDING
+      responses:
+        '201':
+          description: Quote created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Quote'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/quotes/{id}:
+    get:
+      tags:
+        - Quotes
+      summary: Get quote by ID
+      description: Retrieve a specific quote's information
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Quote UUID
+      responses:
+        '200':
+          description: Quote retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Quote'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    
+    put:
+      tags:
+        - Quotes
+      summary: Update quote
+      description: Update quote status or information
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Quote UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [PENDING, ACCEPTED, REJECTED, EXPIRED]
+                  description: New quote status
+                coverageAmount:
+                  type: number
+                  format: decimal
+                  description: Updated coverage amount
+                premium:
+                  type: number
+                  format: decimal
+                  description: Updated premium amount
+      responses:
+        '200':
+          description: Quote updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Quote'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    
+    delete:
+      tags:
+        - Quotes
+      summary: Delete quote
+      description: Remove a quote from the system
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Quote UUID
+      responses:
+        '200':
+          description: Quote deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Quote deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/quotes/expire-old:
+    post:
+      tags:
+        - Quotes
+      summary: Expire old quotes
+      description: Mark quotes older than 30 days as expired (Admin only)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Old quotes expired successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                        description: Number of quotes expired
+                        example: 5
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'

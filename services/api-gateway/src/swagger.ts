@@ -1,351 +1,111 @@
-import swaggerJsdoc from 'swagger-jsdoc';
 import { Application } from 'express';
 import swaggerUi from 'swagger-ui-express';
+import axios from 'axios';
 
-const options: swaggerJsdoc.Options = {
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'InsureTech SaaS API',
-      version: '1.0.0',
-      description: 'Comprehensive API documentation for InsureTech SaaS microservices platform',
-      contact: {
-        name: 'API Support',
-        email: 'support@insuretech.com'
-      },
-      license: {
-        name: 'MIT',
-        url: 'https://opensource.org/licenses/MIT'
-      }
-    },
-    servers: [
-      {
-        url: 'http://localhost:3000',
-        description: 'Development server (API Gateway)'
-      },
-      {
-        url: 'http://localhost:3001',
-        description: 'User Service (Direct)'
-      },
-      {
-        url: 'http://localhost:3003',
-        description: 'Policy Service (Direct)'
-      },
-      {
-        url: 'http://localhost:3004',
-        description: 'Claims Service (Direct)'
-      },
-      {
-        url: 'http://localhost:3005',
-        description: 'Quotes Service (Direct)'
-      }
-    ],
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-          description: 'Enter your JWT token'
-        }
-      },
-      schemas: {
-        Error: {
-          type: 'object',
-          properties: {
-            success: {
-              type: 'boolean',
-              example: false
-            },
-            message: {
-              type: 'string',
-              example: 'Error message'
-            },
-            errors: {
-              type: 'array',
-              items: {
-                type: 'object'
-              }
-            }
-          }
-        },
-        User: {
-          type: 'object',
-          properties: {
-            id: {
-              type: 'string',
-              format: 'uuid'
-            },
-            email: {
-              type: 'string',
-              format: 'email'
-            },
-            firstName: {
-              type: 'string'
-            },
-            lastName: {
-              type: 'string'
-            },
-            role: {
-              type: 'string',
-              enum: ['ADMIN', 'AGENT', 'CUSTOMER']
-            },
-            dateOfBirth: {
-              type: 'string',
-              format: 'date'
-            },
-            phone: {
-              type: 'string'
-            },
-            street: {
-              type: 'string'
-            },
-            city: {
-              type: 'string'
-            },
-            state: {
-              type: 'string'
-            },
-            zipCode: {
-              type: 'string'
-            },
-            country: {
-              type: 'string'
-            },
-            createdAt: {
-              type: 'string',
-              format: 'date-time'
-            },
-            updatedAt: {
-              type: 'string',
-              format: 'date-time'
-            }
-          }
-        },
-        Customer: {
-          type: 'object',
-          properties: {
-            id: {
-              type: 'string',
-              format: 'uuid'
-            },
-            email: {
-              type: 'string',
-              format: 'email'
-            },
-            firstName: {
-              type: 'string'
-            },
-            lastName: {
-              type: 'string'
-            },
-            dateOfBirth: {
-              type: 'string',
-              format: 'date'
-            },
-            phone: {
-              type: 'string'
-            },
-            street: {
-              type: 'string'
-            },
-            city: {
-              type: 'string'
-            },
-            state: {
-              type: 'string'
-            },
-            zipCode: {
-              type: 'string'
-            },
-            country: {
-              type: 'string'
-            },
-            createdAt: {
-              type: 'string',
-              format: 'date-time'
-            },
-            updatedAt: {
-              type: 'string',
-              format: 'date-time'
-            }
-          }
-        },
-        Policy: {
-          type: 'object',
-          properties: {
-            id: {
-              type: 'string',
-              format: 'uuid'
-            },
-            userId: {
-              type: 'string',
-              format: 'uuid'
-            },
-            policyNumber: {
-              type: 'string'
-            },
-            type: {
-              type: 'string',
-              enum: ['AUTO', 'HOME', 'LIFE', 'HEALTH', 'BUSINESS']
-            },
-            status: {
-              type: 'string',
-              enum: ['ACTIVE', 'INACTIVE', 'PENDING', 'CANCELLED', 'EXPIRED']
-            },
-            startDate: {
-              type: 'string',
-              format: 'date'
-            },
-            endDate: {
-              type: 'string',
-              format: 'date'
-            },
-            premium: {
-              type: 'number',
-              format: 'decimal'
-            },
-            coverageAmount: {
-              type: 'number',
-              format: 'decimal'
-            },
-            createdAt: {
-              type: 'string',
-              format: 'date-time'
-            },
-            updatedAt: {
-              type: 'string',
-              format: 'date-time'
-            }
-          }
-        },
-        Claim: {
-          type: 'object',
-          properties: {
-            id: {
-              type: 'string',
-              format: 'uuid'
-            },
-            userId: {
-              type: 'string',
-              format: 'uuid'
-            },
-            policyId: {
-              type: 'string',
-              format: 'uuid'
-            },
-            claimNumber: {
-              type: 'string'
-            },
-            status: {
-              type: 'string',
-              enum: ['SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'DENIED', 'PAID']
-            },
-            claimDate: {
-              type: 'string',
-              format: 'date'
-            },
-            claimAmount: {
-              type: 'number',
-              format: 'decimal'
-            },
-            description: {
-              type: 'string'
-            },
-            createdAt: {
-              type: 'string',
-              format: 'date-time'
-            },
-            updatedAt: {
-              type: 'string',
-              format: 'date-time'
-            }
-          }
-        },
-        Quote: {
-          type: 'object',
-          properties: {
-            id: {
-              type: 'string',
-              format: 'uuid'
-            },
-            userId: {
-              type: 'string',
-              format: 'uuid'
-            },
-            type: {
-              type: 'string',
-              enum: ['AUTO', 'HOME', 'LIFE', 'HEALTH', 'BUSINESS']
-            },
-            status: {
-              type: 'string',
-              enum: ['PENDING', 'ACCEPTED', 'REJECTED', 'EXPIRED']
-            },
-            coverageAmount: {
-              type: 'number',
-              format: 'decimal'
-            },
-            premium: {
-              type: 'number',
-              format: 'decimal'
-            },
-            expiresAt: {
-              type: 'string',
-              format: 'date-time'
-            },
-            createdAt: {
-              type: 'string',
-              format: 'date-time'
-            },
-            updatedAt: {
-              type: 'string',
-              format: 'date-time'
-            }
-          }
-        }
-      }
-    },
-    tags: [
-      {
-        name: 'Authentication',
-        description: 'User authentication and registration endpoints'
-      },
-      {
-        name: 'Users',
-        description: 'User/customer management operations'
-      },
-      {
-        name: 'Policies',
-        description: 'Insurance policy management'
-      },
-      {
-        name: 'Claims',
-        description: 'Insurance claim processing'
-      },
-      {
-        name: 'Quotes',
-        description: 'Insurance quote generation and management'
-      }
-    ]
-  },
-  apis: ['./src/swagger/*.yaml']
-};
+// Service URLs
+const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://localhost:3001';
+const POLICY_SERVICE_URL = process.env.POLICY_SERVICE_URL || 'http://localhost:3003';
+const CLAIMS_SERVICE_URL = process.env.CLAIMS_SERVICE_URL || 'http://localhost:3004';
+const QUOTES_SERVICE_URL = process.env.QUOTES_SERVICE_URL || 'http://localhost:3005';
 
-const swaggerSpec = swaggerJsdoc(options);
+// Fetch and aggregate OpenAPI specs from all services
+async function aggregateSpecs() {
+  try {
+    const [userSpec, policySpec, claimsSpec, quotesSpec] = await Promise.all([
+      axios.get(`${USER_SERVICE_URL}/api-docs.json`).then(r => r.data).catch(() => null),
+      axios.get(`${POLICY_SERVICE_URL}/api-docs.json`).then(r => r.data).catch(() => null),
+      axios.get(`${CLAIMS_SERVICE_URL}/api-docs.json`).then(r => r.data).catch(() => null),
+      axios.get(`${QUOTES_SERVICE_URL}/api-docs.json`).then(r => r.data).catch(() => null),
+    ]);
 
-export function setupSwagger(app: Application): void {
-  // Swagger UI
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-    explorer: true,
-    customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'InsureTech API Documentation'
-  }));
+    const aggregatedSpec: any = {
+      openapi: '3.0.0',
+      info: {
+        title: 'InsureTech SaaS API',
+        version: '1.0.0',
+        description: 'Unified API documentation for all microservices',
+      },
+      servers: [
+        {
+          url: 'http://localhost:3000',
+          description: 'API Gateway',
+        },
+      ],
+      paths: {},
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+          },
+        },
+        schemas: {},
+      },
+      tags: [],
+    };
 
-  // Swagger JSON
-  app.get('/api-docs.json', (req, res) => {
-    res.setHeader('Content-Type', 'application/json');
-    res.send(swaggerSpec);
-  });
+    // Merge specs from all services
+    const specs = [userSpec, policySpec, claimsSpec, quotesSpec].filter(Boolean);
+    
+    for (const spec of specs) {
+      if (spec.paths) {
+        // Rewrite paths to include /api/v1 prefix for gateway
+        Object.keys(spec.paths).forEach(path => {
+          const gatewayPath = path.replace('/api/', '/api/v1/');
+          aggregatedSpec.paths[gatewayPath] = spec.paths[path];
+        });
+      }
+      
+      if (spec.components?.schemas) {
+        Object.assign(aggregatedSpec.components.schemas, spec.components.schemas);
+      }
+      
+      if (spec.tags) {
+        aggregatedSpec.tags.push(...spec.tags);
+      }
+    }
+
+    return aggregatedSpec;
+  } catch (error) {
+    console.error('Error aggregating specs:', error);
+    return {
+      openapi: '3.0.0',
+      info: {
+        title: 'InsureTech SaaS API',
+        version: '1.0.0',
+        description: 'Unable to load service documentation',
+      },
+      paths: {},
+    };
+  }
 }
 
-export default swaggerSpec;
+export function setupSwagger(app: Application): void {
+  // Swagger JSON - dynamically aggregate from services
+  app.get('/api-docs.json', async (req, res) => {
+    try {
+      const spec = await aggregateSpecs();
+      res.setHeader('Content-Type', 'application/json');
+      res.json(spec);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to generate API documentation' });
+    }
+  });
+
+  // Swagger UI
+  app.use('/api-docs', swaggerUi.serve);
+  app.get('/api-docs', async (req, res) => {
+    try {
+      const spec = await aggregateSpecs();
+      const html = swaggerUi.generateHTML(spec, {
+        explorer: true,
+        customCss: '.swagger-ui .topbar { display: none }',
+        customSiteTitle: 'InsureTech API Documentation',
+      });
+      res.send(html);
+    } catch (error) {
+      res.status(500).send('Failed to load API documentation');
+    }
+  });
+}

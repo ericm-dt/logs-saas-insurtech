@@ -21,6 +21,9 @@ COPY . .
 # Build TypeScript
 RUN npm run build
 
+# Copy swagger YAML files to dist
+RUN mkdir -p dist/swagger && cp -r src/swagger/*.yaml dist/swagger/
+
 # Expose port
 EXPOSE 3001
 

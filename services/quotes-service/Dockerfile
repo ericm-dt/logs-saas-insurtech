@@ -40,6 +40,9 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 # Copy built application
 COPY --from=builder /app/dist ./dist
 
+# Copy swagger YAML files
+COPY --from=builder /app/src/swagger ./dist/swagger
+
 EXPOSE 3005
 
 # Push schema and start (dev mode - no migrations needed)
