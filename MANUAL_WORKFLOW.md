@@ -81,7 +81,6 @@ curl -X POST http://localhost:3000/api/v1/quotes \
   -H 'Content-Type: application/json' \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
-    "userId": "'"$USER_ID"'",
     "quoteNumber": "QUO-2025-001",
     "type": "AUTO",
     "coverageAmount": 50000,
@@ -93,7 +92,8 @@ export QUOTE_ID="abc123-def456-..."
 ```
 
 **What happens:**
-- Quote is created with status `ACTIVE`
+- Quote is created for the authenticated user (userId from token)
+- Quote status is `ACTIVE`
 - Premium is automatically calculated (1.5% × coverage × type multiplier)
   - AUTO: 1.0x multiplier = $750
   - HOME: 1.2x multiplier
@@ -170,7 +170,6 @@ curl -X POST http://localhost:3000/api/v1/claims \
   -H 'Content-Type: application/json' \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
-    "userId": "'"$USER_ID"'",
     "policyId": "'"$POLICY_ID"'",
     "claimNumber": "CLM-2025-001",
     "incidentDate": "2025-11-15T10:00:00Z",
@@ -183,7 +182,8 @@ export CLAIM_ID="claim123-abc456-..."
 ```
 
 **What happens:**
-- Claim is created with status `SUBMITTED`
+- Claim is created for the authenticated user (userId from token)
+- Claim status is `SUBMITTED`
 - Validates that the policy exists (calls policy-service)
 - Links claim to user, organization, and policy
 - Records incident date and claim amount

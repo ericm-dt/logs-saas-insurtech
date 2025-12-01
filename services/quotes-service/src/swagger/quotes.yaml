@@ -123,14 +123,14 @@ paths:
             schema:
               type: object
               required:
-                - userId
+                - quoteNumber
                 - type
                 - coverageAmount
               properties:
-                userId:
+                quoteNumber:
                   type: string
-                  format: uuid
-                  example: 123e4567-e89b-12d3-a456-426614174000
+                  example: QUO-2025-001234
+                  description: Unique quote identifier
                 type:
                   type: string
                   enum: [AUTO, HOME, LIFE, HEALTH, BUSINESS]
@@ -140,10 +140,11 @@ paths:
                   format: decimal
                   example: 50000.00
                   description: Desired coverage amount
-                status:
+                expiresAt:
                   type: string
-                  enum: [PENDING, ACCEPTED, REJECTED, EXPIRED]
-                  default: PENDING
+                  format: date-time
+                  example: 2025-12-31T23:59:59Z
+                  description: Quote expiration date (defaults to 30 days from creation)
       responses:
         '201':
           description: Quote created successfully

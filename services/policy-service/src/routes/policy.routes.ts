@@ -7,8 +7,6 @@ import axios from 'axios';
 const router = Router();
 const prisma = new PrismaClient();
 
-const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://localhost:3001';
-
 // Validation middleware
 const validate = (validations: ValidationChain[]) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -27,20 +25,6 @@ const validate = (validations: ValidationChain[]) => {
   };
 };
 
-// Validate user exists
-async function validateUser(userId: string, token: string): Promise<boolean> {
-  try {
-    const response = await axios.get(
-      `${USER_SERVICE_URL}/api/users/${userId}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return response.data.success;
-  } catch (error) {
-    return false;
-  }
-}
-
-// Get all policies
 router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
   try {
     const { 
@@ -180,7 +164,6 @@ router.post(
   '/',
   authenticate,
   validate([
-    body('userId').notEmpty().withMessage('User ID is required'),
     body('policyNumber').notEmpty().withMessage('Policy number is required'),
     body('type').isIn(['AUTO', 'HOME', 'LIFE', 'HEALTH', 'BUSINESS']).withMessage('Invalid policy type'),
     body('startDate').isISO8601().withMessage('Valid start date required'),
@@ -190,19 +173,10 @@ router.post(
   ]),
   async (req: AuthRequest, res): Promise<void> => {
     try {
-      const { userId, policyNumber, type, startDate, endDate, premium, coverageAmount, status } = req.body;
-
-      // Validate user exists
-      const token = req.headers.authorization?.substring(7) || '';
-      const userExists = await validateUser(userId, token);
+      const { policyNumber, type, startDate, endDate, premium, coverageAmount, status } = req.body;
       
-      if (!userExists) {
-        res.status(400).json({
-          success: false,
-          message: 'User not found'
-        });
-        return;
-      }
+      // Use userId from authenticated token
+      const userId = (req as AuthRequest).user!.userId;
 
       const policy = await prisma.policy.create({        data: {
           userId,

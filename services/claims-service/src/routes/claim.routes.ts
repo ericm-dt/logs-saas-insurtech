@@ -7,7 +7,6 @@ import axios from 'axios';
 const router = Router();
 const prisma = new PrismaClient();
 
-const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://localhost:3001';
 const POLICY_SERVICE_URL = process.env.POLICY_SERVICE_URL || 'http://localhost:3003';
 
 // Validation middleware
@@ -45,19 +44,6 @@ async function validatePolicy(policyId: string, token: string): Promise<{ valid:
     return { valid: false };
   } catch (error) {
     return { valid: false };
-  }
-}
-
-// Validate user exists
-async function validateUser(userId: string, token: string): Promise<boolean> {
-  try {
-    const response = await axios.get(
-      `${USER_SERVICE_URL}/api/users/${userId}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return response.data.success;
-  } catch (error) {
-    return false;
   }
 }
 
@@ -193,7 +179,6 @@ router.post(
   '/',
   authenticate,
   validate([
-    body('userId').notEmpty().withMessage('User ID is required'),
     body('policyId').notEmpty().withMessage('Policy ID is required'),
     body('claimNumber').notEmpty().withMessage('Claim number is required'),
     body('incidentDate').isISO8601().withMessage('Valid incident date required'),
@@ -202,19 +187,12 @@ router.post(
   ]),
   async (req: AuthRequest, res): Promise<void> => {
     try {
-      const { userId, policyId, claimNumber, incidentDate, description, claimAmount } = req.body;
+      const { policyId, claimNumber, incidentDate, description, claimAmount } = req.body;
+      
+      // Use userId from authenticated token
+      const userId = (req as AuthRequest).user!.userId;
 
       const token = req.headers.authorization?.substring(7) || '';
-
-      // Validate user exists
-      const userExists = await validateUser(userId, token);
-      if (!userExists) {
-        res.status(400).json({
-          success: false,
-          message: 'User not found'
-        });
-        return;
-      }
 
       // Validate policy exists and is active
       const policyValidation = await validatePolicy(policyId, token);

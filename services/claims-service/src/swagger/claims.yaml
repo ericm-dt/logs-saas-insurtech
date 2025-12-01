@@ -113,39 +113,35 @@ paths:
             schema:
               type: object
               required:
-                - userId
                 - policyId
                 - claimNumber
-                - claimDate
+                - incidentDate
                 - claimAmount
                 - description
               properties:
-                userId:
-                  type: string
-                  format: uuid
-                  example: 123e4567-e89b-12d3-a456-426614174000
                 policyId:
                   type: string
                   format: uuid
                   example: 987fcdeb-51a2-43f7-b890-123456789abc
+                  description: UUID of the policy this claim is for
                 claimNumber:
                   type: string
                   example: CLM-2024-001234
-                claimDate:
+                  description: Unique claim identifier
+                incidentDate:
                   type: string
-                  format: date
-                  example: 2024-11-25
+                  format: date-time
+                  example: 2024-11-25T14:30:00Z
+                  description: Date and time when the incident occurred
                 claimAmount:
                   type: number
                   format: decimal
                   example: 5000.00
+                  description: Claimed amount in dollars
                 description:
                   type: string
                   example: Car accident on highway - rear-end collision
-                status:
-                  type: string
-                  enum: [SUBMITTED, UNDER_REVIEW, APPROVED, DENIED, PAID]
-                  default: SUBMITTED
+                  description: Detailed description of the incident
       responses:
         '201':
           description: Claim created successfully
