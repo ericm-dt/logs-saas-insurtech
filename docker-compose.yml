@@ -46,6 +46,7 @@ services:
       PORT: 3003
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/policy_db
       USER_SERVICE_URL: http://user-service:3001
+      AUTH_SERVICE_URL: http://user-service:3001
     depends_on:
       postgres:
         condition: service_healthy
@@ -64,6 +65,7 @@ services:
       PORT: 3004
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/claims_db
       USER_SERVICE_URL: http://user-service:3001
+      AUTH_SERVICE_URL: http://user-service:3001
       POLICY_SERVICE_URL: http://policy-service:3003
     depends_on:
       postgres:
@@ -85,6 +87,8 @@ services:
       PORT: 3005
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/quotes_db
       USER_SERVICE_URL: http://user-service:3001
+      AUTH_SERVICE_URL: http://user-service:3001
+      POLICY_SERVICE_URL: http://policy-service:3003
     depends_on:
       postgres:
         condition: service_healthy
