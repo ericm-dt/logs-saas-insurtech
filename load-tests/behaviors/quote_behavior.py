@@ -138,7 +138,7 @@ class QuoteManagementBehavior(BaseAgentBehavior):
             catch_response=True,
             name="2. Convert to Policy"
         ) as response:
-            if response.status_code == 200:
+            if response.status_code in [200, 201]:  # Accept both 200 and 201
                 policy_id = response.json().get("data", {}).get("policy", {}).get("id")
                 response.success()
                 
@@ -236,12 +236,12 @@ class QuoteManagementBehavior(BaseAgentBehavior):
             name="1. Find Policy to Update"
         ) as response:
             if response.status_code != 200:
-                response.failure("Failed to get policies")
+                response.failure(f"Failed to get policies: {response.status_code}")
                 return
             
             policies = response.json().get("data", [])
+            response.success()  # Mark success even if empty
             if not policies:
-                response.success()
                 return
             
             # User scans policy list
@@ -262,9 +262,24 @@ class QuoteManagementBehavior(BaseAgentBehavior):
         
         # Step 3: Update policy status
         new_status = random.choice(["ACTIVE", "CANCELLED"])
+        status_reasons = {
+            "CANCELLED": [
+                "Customer request",
+                "Non-payment of premium",
+                "Policy no longer needed",
+                "Switching to different provider"
+            ],
+            "ACTIVE": [
+                "Reactivation after payment received",
+                "Reinstatement approved"
+            ]
+        }
         self.client.put(
-            f"/api/v1/policies/{policy['id']}/status",
-            json={"status": new_status},
+            f"/api/v1/policies/{policy['id']}",
+            json={
+                "status": new_status,
+                "statusChangeReason": random.choice(status_reasons[new_status])
+            },
             headers=headers,
             name="3. Update Policy Status"
         )

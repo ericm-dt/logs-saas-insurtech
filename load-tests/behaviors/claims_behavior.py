@@ -47,12 +47,12 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
             name="1. Find Active Policy"
         ) as response:
             if response.status_code != 200:
-                response.failure("Failed to get policies")
+                response.failure(f"Failed to get policies: {response.status_code}")
                 return
             
             policies = response.json().get("data", [])
+            response.success()  # Mark success even if empty
             if not policies:
-                response.success()
                 return
             
             policy = random.choice(policies)
@@ -123,12 +123,12 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
             name="1. Find Claim to Process"
         ) as response:
             if response.status_code != 200:
-                response.failure("Failed to get claims")
+                response.failure(f"Failed to get claims: {response.status_code}")
                 return
             
             claims = response.json().get("data", [])
+            response.success()  # Mark success even if empty
             if not claims:
-                response.success()
                 return
             
             claim = random.choice(claims)
@@ -151,13 +151,37 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
             time.sleep(random.uniform(3, 7))
         
         # Step 3: Approve or deny the claim (80% approval rate)
-        final_status = "APPROVED" if random.random() < 0.8 else "DENIED"
-        self.client.put(
-            f"/api/v1/claims/{claim_id}/status",
-            json={"status": final_status},
-            headers=headers,
-            name=f"3. {final_status.title()} Claim"
-        )
+        if random.random() < 0.8:
+            # Approve claim with approved amount
+            claim_amount = float(claim.get('claimAmount', 5000))
+            approved_amount = round(claim_amount * random.uniform(0.8, 1.0), 2)
+            self.client.put(
+                f"/api/v1/claims/{claim_id}/status",
+                json={
+                    "status": "APPROVED",
+                    "approvedAmount": approved_amount
+                },
+                headers=headers,
+                name="3. Approved Claim"
+            )
+        else:
+            # Deny claim with reason
+            denial_reasons = [
+                "Insufficient documentation provided",
+                "Claim exceeds policy coverage limits",
+                "Incident not covered under policy terms",
+                "Duplicate claim submission",
+                "Policy was not active at time of incident"
+            ]
+            self.client.put(
+                f"/api/v1/claims/{claim_id}/status",
+                json={
+                    "status": "DENIED",
+                    "denialReason": random.choice(denial_reasons)
+                },
+                headers=headers,
+                name="3. Denied Claim"
+            )
         
         # Agent finalizes decision
         time.sleep(random.uniform(1, 2))

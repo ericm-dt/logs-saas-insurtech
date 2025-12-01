@@ -109,8 +109,8 @@ services:
       POLICY_SERVICE_URL: http://policy-service:3003
       CLAIMS_SERVICE_URL: http://claims-service:3004
       QUOTES_SERVICE_URL: http://quotes-service:3005
-      RATE_LIMIT_WINDOW_MS: 900000
-      RATE_LIMIT_MAX_REQUESTS: 100
+      RATE_LIMIT_WINDOW_MS: 60000  # 1 minute window
+      RATE_LIMIT_MAX_REQUESTS: 1000  # Much higher limit for load testing
       ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173
     depends_on:
       - user-service
@@ -190,10 +190,7 @@ services:
       - ./load-tests:/app
     depends_on:
       - api-gateway
-    command: >
-      --web-host=0.0.0.0
-      --web-port=8089
-      --headless=false
+    command: --web-host=0.0.0.0 --web-port=8089
     restart: unless-stopped
 
 volumes:

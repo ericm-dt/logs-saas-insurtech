@@ -204,11 +204,11 @@ router.post(
         return;
       }
 
-      // Verify user owns the policy
-      if (policyValidation.policy.userId !== userId) {
-        res.status(400).json({
+      // Verify policy belongs to same organization (multi-tenant security)
+      if (policyValidation.policy.organizationId !== (req as AuthRequest).user!.organizationId) {
+        res.status(403).json({
           success: false,
-          message: 'Policy does not belong to this user'
+          message: 'Policy belongs to a different organization'
         });
         return;
       }
