@@ -172,6 +172,59 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/auth/verify:
+    post:
+      tags:
+        - Authentication
+      summary: Verify JWT token
+      description: Verify a JWT token and return the decoded payload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                  description: JWT token to verify
+                  example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+      responses:
+        '200':
+          description: Token verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                        format: uuid
+                      email:
+                        type: string
+                        format: email
+                      role:
+                        type: string
+                      organizationId:
+                        type: string
+                        format: uuid
+                      orgRole:
+                        type: string
+        '401':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/auth/me:
     get:
       tags:
@@ -195,6 +248,12 @@ paths:
                     $ref: '#/components/schemas/User'
         '401':
           description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
           content:
             application/json:
               schema:

@@ -66,4 +66,48 @@ router.post('/verify', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/me', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({ success: false, message: 'No token provided' });
+      return;
+    }
+
+    const token = authHeader.substring(7);
+    const payload = authService.verifyToken(token);
+    
+    const user = await prisma.user.findUnique({ 
+      where: { id: payload.userId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        orgRole: true,
+        organizationId: true,
+        dateOfBirth: true,
+        phone: true,
+        street: true,
+        city: true,
+        state: true,
+        zipCode: true,
+        country: true,
+        createdAt: true,
+        updatedAt: true,
+      }
+    });
+
+    if (!user) {
+      res.status(404).json({ success: false, message: 'User not found' });
+      return;
+    }
+
+    res.json({ success: true, data: user });
+  } catch (error) {
+    res.status(401).json({ success: false, message: 'Invalid token' });
+  }
+});
+
 export default router;
