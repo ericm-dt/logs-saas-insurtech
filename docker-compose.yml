@@ -177,6 +177,25 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Locust Load Testing
+  locust:
+    build:
+      context: ./load-tests
+      dockerfile: Dockerfile
+    ports:
+      - "8089:8089"
+    environment:
+      LOCUST_HOST: http://api-gateway:3000
+    volumes:
+      - ./load-tests:/app
+    depends_on:
+      - api-gateway
+    command: >
+      --web-host=0.0.0.0
+      --web-port=8089
+      --headless=false
+    restart: unless-stopped
+
 volumes:
   postgres_data:
 
