@@ -1,5 +1,5 @@
 """
-Locust load testing entry point for InsureTech SaaS API
+Locust load testing entry point for DynaClaimz SaaS API
 
 This script simulates insurance agents performing typical workflow tasks:
 1. Quote Management: Login → Create quotes → Convert to policies → Manage policies

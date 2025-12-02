@@ -1,7 +1,7 @@
 {
-  "name": "insuretech-microservices",
+  "name": "dynaclaimz-microservices",
   "version": "1.0.0",
-  "description": "InsureTech SaaS Microservices Platform",
+  "description": "DynaClaimz SaaS Microservices Platform",
   "private": true,
   "scripts": {
     "install:all": "npm run install:shared && npm run install:services",
@@ -19,7 +19,7 @@
     "docker:logs": "docker-compose logs -f",
     "docker:clean": "docker-compose down -v"
   },
-  "keywords": ["microservices", "insuretech", "saas", "api", "typescript", "express", "postgresql"],
+  "keywords": ["microservices", "insurance", "claims", "saas", "api", "typescript", "express", "postgresql"],
   "author": "",
   "license": "MIT"
 }

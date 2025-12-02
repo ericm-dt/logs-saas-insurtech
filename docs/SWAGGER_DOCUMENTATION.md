@@ -2,7 +2,7 @@
 
 ## Overview
 
-The InsureTech SaaS API is fully documented using OpenAPI 3.0 (Swagger) specification. The interactive API documentation is available through Swagger UI.
+The DynaClaimz SaaS API is fully documented using OpenAPI 3.0 (Swagger) specification. The interactive API documentation is available through Swagger UI.
 
 ## Accessing Documentation
 
@@ -169,4 +169,4 @@ For production deployments:
 
 - [OpenAPI Specification](https://swagger.io/specification/)
 - [Swagger UI Documentation](https://swagger.io/tools/swagger-ui/)
-- [InsureTech API Architecture](./MICROSERVICES_ARCHITECTURE.md)
+- [DynaClaimz API Architecture](./MICROSERVICES_ARCHITECTURE.md)

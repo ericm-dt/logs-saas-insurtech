@@ -1,7 +1,7 @@
-# Copilot Instructions for InsureTech Microservices
+# Copilot Instructions for DynaClaimz Microservices
 
 ## Project Overview
-A microservices-based InsureTech SaaS platform with 6 independent services communicating via REST APIs. Each service has its own database, codebase, and can be deployed independently.
+A microservices-based Insurance SaaS platform with 6 independent services communicating via REST APIs. Each service has its own database, codebase, and can be deployed independently.
 
 ## Architecture Overview
 

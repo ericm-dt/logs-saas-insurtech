@@ -87,7 +87,7 @@ app.use('/api/v1/quotes', createProxyMiddleware({ ...proxyOptions, target: QUOTE
 // Root endpoint
 app.get('/', (req: Request, res: Response) => {
   res.json({
-    message: 'InsureTech SaaS API Gateway',
+    message: 'DynaClaimz SaaS API Gateway',
     version: '1.0.0',
     architecture: 'microservices',
     documentation: '/api-docs',

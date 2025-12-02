@@ -1,4 +1,4 @@
-# InsureTech SaaS API - PostgreSQL Migration
+# DynaClaimz SaaS API - PostgreSQL Migration
 
 This project has been updated to use **PostgreSQL** with **Prisma ORM** instead of in-memory storage.
 
@@ -35,11 +35,11 @@ docker run --name postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgre
 psql -U postgres
 
 # Create database
-CREATE DATABASE insuretech_db;
+CREATE DATABASE dynaclaimz_db;
 
 # Create user (optional)
-CREATE USER insuretech_user WITH PASSWORD 'your_password';
-GRANT ALL PRIVILEGES ON DATABASE insuretech_db TO insuretech_user;
+CREATE USER dynaclaimz_user WITH PASSWORD 'your_password';
+GRANT ALL PRIVILEGES ON DATABASE dynaclaimz_db TO dynaclaimz_user;
 
 \q
 ```
@@ -51,7 +51,7 @@ GRANT ALL PRIVILEGES ON DATABASE insuretech_db TO insuretech_user;
 cp .env.example .env
 
 # Edit .env and set DATABASE_URL
-# Example: DATABASE_URL="postgresql://postgres:postgres@localhost:5432/insuretech_db"
+# Example: DATABASE_URL="postgresql://postgres:postgres@localhost:5432/dynaclaimz_db"
 ```
 
 ### 4. Install Dependencies
@@ -94,8 +94,8 @@ The schema includes:
 
 After running `npm run db:seed`, you'll have:
 
-- **Admin user**: `admin@insuretech.com` / `admin123`
-- **Agent user**: `agent@insuretech.com` / `agent123`
+- **Admin user**: `admin@dynaclaimz.com` / `admin123`
+- **Agent user**: `agent@dynaclaimz.com` / `agent123`
 - **Sample customer**: `john.doe@example.com`
 - **Sample policy**: `POL-2024-001`
 - **Sample quote** for home insurance
@@ -140,7 +140,7 @@ Use the seeded credentials:
 # Login as admin
 curl -X POST http://localhost:3000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@insuretech.com","password":"admin123"}'
+  -d '{"email":"admin@dynaclaimz.com","password":"admin123"}'
 
 # Use the returned JWT token in Authorization header
 # Authorization: Bearer <token>

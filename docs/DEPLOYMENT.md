@@ -1,4 +1,4 @@
-# InsureTech Microservices - Deployment Guide
+# DynaClaimz Microservices - Deployment Guide
 
 ## Quick Start with Docker Compose
 
@@ -201,7 +201,7 @@ curl http://localhost:3005/health
 - Manual migration: `docker-compose exec <service-name> npx prisma migrate deploy`
 
 ### Inter-Service Communication Failures
-- Verify services are on same network: `docker network inspect insuretech-network`
+- Verify services are on same network: `docker network inspect dynaclaimz-network`
 - Check service names resolve: `docker-compose exec api-gateway ping auth-service`
 
 ## Production Considerations

@@ -1,7 +1,7 @@
-# Copilot Instructions for InsureTech SaaS API
+# Copilot Instructions for DynaClaimz SaaS API
 
 ## Project Overview
-This is a RESTful API service for an InsureTech SaaS platform built with Node.js, TypeScript, and Express. It provides core insurance operations including policy management, claims processing, customer management, and quote generation.
+This is a RESTful API service for an Insurance SaaS platform built with Node.js, TypeScript, and Express. It provides core insurance operations including policy management, claims processing, customer management, and quote generation.
 
 ## Architecture
 
@@ -79,7 +79,7 @@ cp .env.example .env
 # Edit .env with your JWT_SECRET and DATABASE_URL
 
 # Set up PostgreSQL database (ensure PostgreSQL is running)
-# Example DATABASE_URL: postgresql://username:password@localhost:5432/insuretech_db
+# Example DATABASE_URL: postgresql://username:password@localhost:5432/dynaclaimz_db
 
 # Generate Prisma Client
 npm run prisma:generate
@@ -180,7 +180,7 @@ import { User } from '@types/auth.types';
 ```
 Note: Currently not working due to module resolution - use relative paths for now.
 
-## InsureTech Domain Model
+## DynaClaimz Domain Model
 
 ### Core Entities
 - **User**: Authentication entity with role (admin/agent/customer)

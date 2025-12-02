@@ -77,7 +77,7 @@ async function aggregateSpecs() {
     return {
       openapi: '3.0.0',
       info: {
-        title: 'InsureTech SaaS API',
+        title: 'DynaClaimz SaaS API',
         version: '1.0.0',
         description: 'Unable to load service documentation',
       },
@@ -106,7 +106,7 @@ export function setupSwagger(app: Application): void {
       const html = swaggerUi.generateHTML(spec, {
         explorer: true,
         customCss: '.swagger-ui .topbar { display: none }',
-        customSiteTitle: 'InsureTech API Documentation',
+        customSiteTitle: 'DynaClaimz API Documentation',
       });
       res.send(html);
     } catch (error) {

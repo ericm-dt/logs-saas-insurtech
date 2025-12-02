@@ -1,6 +1,6 @@
-# InsureTech SaaS API
+# DynaClaimz SaaS API
 
-A comprehensive RESTful API for an InsureTech SaaS platform built with Node.js, TypeScript, and Express.
+A comprehensive RESTful API for an Insurance SaaS platform built with Node.js, TypeScript, and Express.
 
 ## Features
 
@@ -46,7 +46,7 @@ npm install
 cp .env.example .env
 
 # Edit .env and set DATABASE_URL and JWT_SECRET
-# Example: DATABASE_URL="postgresql://postgres:postgres@localhost:5432/insuretech_db"
+# Example: DATABASE_URL="postgresql://postgres:postgres@localhost:5432/dynaclaimz_db"
 
 # Generate Prisma Client
 npm run prisma:generate

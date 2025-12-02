@@ -1,6 +1,6 @@
 # Load Testing with Locust
 
-This directory contains Locust load testing scripts for the InsureTech SaaS API.
+This directory contains Locust load testing scripts for the DynaClaimz SaaS API.
 
 ## Overview
 
@@ -99,7 +99,7 @@ MAX_TASKS_BEFORE_ROTATION = 15  # Maximum tasks before user rotation
 
 - **GROUP_A_PERCENTAGE**: Percentage of organizations in Group A (0-100)
 - All users in the same organization get the same group assignment (hash-based)
-- User-Agent headers identify group: "InsureTech-API-Client/2.1.0 (Group-A/B)"
+- User-Agent headers identify group: "DynaClaimz-API-Client/2.1.0 (Group-A/B)"
 - Set rotation min/max to 0 to disable automatic user rotation
 
 ### User Distribution

@@ -40,9 +40,9 @@ def get_user_agent(user_group: str) -> str:
         User-Agent header string
     """
     if user_group == 'A':
-        return "InsureTech-API-Client/2.1.0 (Group-A)"
+        return "DynaClaimz-API-Client/2.1.0 (Group-A)"
     else:
-        return "InsureTech-API-Client/2.1.0 (Group-B)"
+        return "DynaClaimz-API-Client/2.1.0 (Group-B)"
 
 
 def with_rotation(task_func):

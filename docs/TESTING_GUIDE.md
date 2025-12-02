@@ -1,4 +1,4 @@
-# Testing Guide - InsureTech Microservices
+# Testing Guide - DynaClaimz Microservices
 
 This guide provides step-by-step instructions for testing all microservices.
 

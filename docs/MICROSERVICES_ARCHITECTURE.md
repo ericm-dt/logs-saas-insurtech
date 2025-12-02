@@ -1,4 +1,4 @@
-# InsureTech Microservices Architecture
+# DynaClaimz Microservices Architecture
 
 ## Service Boundaries
 

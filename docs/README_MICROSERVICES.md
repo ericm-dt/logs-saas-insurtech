@@ -1,6 +1,6 @@
-# InsureTech Microservices Platform
+# DynaClaimz Microservices Platform
 
-A production-ready microservices architecture for an InsureTech SaaS platform built with Node.js, TypeScript, Express, and PostgreSQL.
+A production-ready microservices architecture for an Insurance SaaS platform built with Node.js, TypeScript, Express, and PostgreSQL.
 
 ## 🏗️ Architecture
 
