@@ -1,0 +1,257 @@
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: dynaclaimz
+
+# Default profile - local development with Docker Compose
+build:
+  artifacts:
+  - image: dynaclaimz/api-gateway
+    context: services/api-gateway
+    docker:
+      dockerfile: Dockerfile
+  - image: dynaclaimz/user-service
+    context: services/user-service
+    docker:
+      dockerfile: Dockerfile
+  - image: dynaclaimz/policy-service
+    context: services/policy-service
+    docker:
+      dockerfile: Dockerfile
+  - image: dynaclaimz/claims-service
+    context: services/claims-service
+    docker:
+      dockerfile: Dockerfile
+  - image: dynaclaimz/quotes-service
+    context: services/quotes-service
+    docker:
+      dockerfile: Dockerfile
+  local:
+    push: false
+    useBuildkit: true
+
+deploy:
+  docker:
+    useCompose: true
+
+portForward:
+- resourceType: service
+  resourceName: api-gateway
+  port: 3000
+  localPort: 3000
+
+---
+# Local Kubernetes profile (e.g., minikube, Docker Desktop k8s)
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: dynaclaimz-local-k8s
+
+profiles:
+- name: local-k8s
+  build:
+    artifacts:
+    - image: dynaclaimz/api-gateway
+      context: services/api-gateway
+      docker:
+        dockerfile: Dockerfile
+    - image: dynaclaimz/user-service
+      context: services/user-service
+      docker:
+        dockerfile: Dockerfile
+      sync:
+        manual:
+        - src: "src/**/*.ts"
+          dest: /app/src
+    - image: dynaclaimz/policy-service
+      context: services/policy-service
+      docker:
+        dockerfile: Dockerfile
+      sync:
+        manual:
+        - src: "src/**/*.ts"
+          dest: /app/src
+    - image: dynaclaimz/claims-service
+      context: services/claims-service
+      docker:
+        dockerfile: Dockerfile
+      sync:
+        manual:
+        - src: "src/**/*.ts"
+          dest: /app/src
+    - image: dynaclaimz/quotes-service
+      context: services/quotes-service
+      docker:
+        dockerfile: Dockerfile
+      sync:
+        manual:
+        - src: "src/**/*.ts"
+          dest: /app/src
+    local:
+      push: false
+      useBuildkit: true
+  
+  deploy:
+    kubectl:
+      manifests:
+      - k8s/namespace.yaml
+      - k8s/secrets.yaml
+      - k8s/services/*.yaml
+      - k8s/deployments/*.yaml
+  
+  portForward:
+  - resourceType: service
+    resourceName: api-gateway
+    namespace: dynaclaimz
+    port: 80
+    localPort: 3000
+  - resourceType: service
+    resourceName: user-service
+    namespace: dynaclaimz
+    port: 3001
+    localPort: 3001
+
+---
+# EKS Development profile
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: dynaclaimz-eks-dev
+
+profiles:
+- name: eks-dev
+  build:
+    artifacts:
+    - image: dynaclaimz/api-gateway
+      context: services/api-gateway
+      docker:
+        dockerfile: Dockerfile
+    - image: dynaclaimz/user-service
+      context: services/user-service
+      docker:
+        dockerfile: Dockerfile
+    - image: dynaclaimz/policy-service
+      context: services/policy-service
+      docker:
+        dockerfile: Dockerfile
+    - image: dynaclaimz/claims-service
+      context: services/claims-service
+      docker:
+        dockerfile: Dockerfile
+    - image: dynaclaimz/quotes-service
+      context: services/quotes-service
+      docker:
+        dockerfile: Dockerfile
+    local:
+      push: true
+      useBuildkit: true
+    tagPolicy:
+      gitCommit:
+        variant: AbbrevCommitSha
+  
+  deploy:
+    kubectl:
+      manifests:
+      - k8s/namespace.yaml
+      - k8s/secrets.yaml
+      - k8s/services/*.yaml
+      - k8s/deployments/*.yaml
+      - k8s/db-init-job.yaml
+      hooks:
+        before:
+        - host:
+            command:
+            - sh
+            - -c
+            - |
+              # Get ECR registry URL from Terraform
+              export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+              export AWS_REGION=$(cd terraform && terraform output -raw aws_region || echo "us-west-2")
+              export ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+              
+              # Login to ECR
+              aws ecr get-login-password --region ${AWS_REGION} | \
+                docker login --username AWS --password-stdin ${ECR_REGISTRY}
+              
+              echo "Logged into ECR: ${ECR_REGISTRY}"
+  
+  portForward:
+  - resourceType: service
+    resourceName: api-gateway
+    namespace: dynaclaimz
+    port: 80
+    localPort: 3000
+
+---
+# EKS Production profile
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: dynaclaimz-eks-prod
+
+profiles:
+- name: eks-prod
+  build:
+    artifacts:
+    - image: dynaclaimz/api-gateway
+      context: services/api-gateway
+      docker:
+        dockerfile: Dockerfile
+        buildArgs:
+          NODE_ENV: production
+    - image: dynaclaimz/user-service
+      context: services/user-service
+      docker:
+        dockerfile: Dockerfile
+        buildArgs:
+          NODE_ENV: production
+    - image: dynaclaimz/policy-service
+      context: services/policy-service
+      docker:
+        dockerfile: Dockerfile
+        buildArgs:
+          NODE_ENV: production
+    - image: dynaclaimz/claims-service
+      context: services/claims-service
+      docker:
+        dockerfile: Dockerfile
+        buildArgs:
+          NODE_ENV: production
+    - image: dynaclaimz/quotes-service
+      context: services/quotes-service
+      docker:
+        dockerfile: Dockerfile
+        buildArgs:
+          NODE_ENV: production
+    local:
+      push: true
+      useBuildkit: true
+    tagPolicy:
+      gitCommit:
+        variant: Tags
+  
+  deploy:
+    kubectl:
+      manifests:
+      - k8s/namespace.yaml
+      - k8s/secrets.yaml
+      - k8s/services/*.yaml
+      - k8s/deployments/*.yaml
+      - k8s/db-init-job.yaml
+      hooks:
+        before:
+        - host:
+            command:
+            - sh
+            - -c
+            - |
+              # Get ECR registry URL from Terraform
+              export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+              export AWS_REGION=$(cd terraform && terraform output -raw aws_region || echo "us-west-2")
+              export ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+              
+              # Login to ECR
+              aws ecr get-login-password --region ${AWS_REGION} | \
+                docker login --username AWS --password-stdin ${ECR_REGISTRY}
+              
+              echo "Logged into ECR: ${ECR_REGISTRY}"
