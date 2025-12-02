@@ -1,0 +1,54 @@
+# Example terraform.tfvars
+# Copy this file to terraform.tfvars and customize for your environment
+
+# Project Configuration
+project_name = "dynaclaimz"
+environment  = "production"
+aws_region   = "us-west-2"
+
+# Container Registry Configuration
+# Set to true to create AWS ECR repositories (recommended for AWS deployments)
+# Set to false if using external registry like DockerHub, GHCR, etc.
+create_ecr_repositories = true
+
+# VPC Configuration
+vpc_cidr                 = "10.0.0.0/16"
+availability_zones_count = 3
+
+# EKS Configuration
+eks_cluster_version = "1.28"
+node_instance_types = ["t3.medium"]
+node_desired_size   = 3
+node_min_size       = 2
+node_max_size       = 10
+node_disk_size      = 50
+
+# RDS Configuration
+db_instance_class           = "db.t3.medium"
+db_allocated_storage        = 100
+db_max_allocated_storage    = 500
+db_engine_version           = "14.10"
+db_username                 = "dynaclaimz_admin"
+# db_password               = ""  # Leave empty to auto-generate
+db_backup_retention_period  = 7
+db_multi_az                 = true
+
+# Domain and SSL (optional)
+# domain_name               = "api.dynaclaimz.com"
+# enable_https              = true
+# acm_certificate_arn       = "arn:aws:acm:us-west-2:123456789012:certificate/xxxxx"
+
+# Monitoring
+enable_cloudwatch_logs = true
+log_retention_days     = 30
+
+# Cost Optimization
+enable_spot_instances     = false
+spot_instance_percentage  = 50
+
+# Additional Tags
+additional_tags = {
+  Team        = "Platform"
+  CostCenter  = "Engineering"
+  Compliance  = "SOC2"
+}

@@ -1,0 +1,122 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-init
+  namespace: dynaclaimz
+  labels:
+    app: db-init
+spec:
+  ttlSecondsAfterFinished: 86400 # Clean up after 24 hours
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: db-init
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+      # Create additional databases
+      - name: create-databases
+        image: postgres:14
+        env:
+        - name: PGHOST
+          value: "RDS_ENDPOINT_HERE" # Replace with actual RDS endpoint
+        - name: PGPORT
+          value: "5432"
+        - name: PGUSER
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: DB_USERNAME
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: DB_PASSWORD
+        command:
+        - sh
+        - -c
+        - |
+          # Create databases if they don't exist
+          psql -tc "SELECT 1 FROM pg_database WHERE datname = 'user_db'" | grep -q 1 || \
+            psql -c "CREATE DATABASE user_db"
+          
+          psql -tc "SELECT 1 FROM pg_database WHERE datname = 'policy_db'" | grep -q 1 || \
+            psql -c "CREATE DATABASE policy_db"
+          
+          psql -tc "SELECT 1 FROM pg_database WHERE datname = 'claims_db'" | grep -q 1 || \
+            psql -c "CREATE DATABASE claims_db"
+          
+          psql -tc "SELECT 1 FROM pg_database WHERE datname = 'quotes_db'" | grep -q 1 || \
+            psql -c "CREATE DATABASE quotes_db"
+          
+          echo "All 4 databases created successfully"
+      
+      containers:
+      # Run Prisma migrations for user-service
+      - name: migrate-user-db
+        image: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/dynaclaimz/user-service:latest
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: USER_DB_URL
+        command:
+        - sh
+        - -c
+        - |
+          echo "Running user-service migrations..."
+          npx prisma migrate deploy
+          echo "User service migrations complete"
+      
+      # Run Prisma migrations for policy-service
+      - name: migrate-policy-db
+        image: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/dynaclaimz/policy-service:latest
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: POLICY_DB_URL
+        command:
+        - sh
+        - -c
+        - |
+          echo "Running policy-service migrations..."
+          npx prisma migrate deploy
+          echo "Policy service migrations complete"
+      
+      # Run Prisma migrations for claims-service
+      - name: migrate-claims-db
+        image: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/dynaclaimz/claims-service:latest
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: CLAIMS_DB_URL
+        command:
+        - sh
+        - -c
+        - |
+          echo "Running claims-service migrations..."
+          npx prisma migrate deploy
+          echo "Claims service migrations complete"
+      
+      # Run Prisma migrations for quotes-service
+      - name: migrate-quotes-db
+        image: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/dynaclaimz/quotes-service:latest
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: QUOTES_DB_URL
+        command:
+        - sh
+        - -c
+        - |
+          echo "Running quotes-service migrations..."
+          npx prisma migrate deploy
+          echo "Quotes service migrations complete"

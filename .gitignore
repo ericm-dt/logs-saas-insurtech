@@ -38,5 +38,22 @@ coverage/
 temp/
 tmp/
 
+# Python
 *.pyc
 __pycache__/
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/backend.tf
+terraform/terraform.tfvars
+terraform/*.auto.tfvars
+terraform/crash.log
+terraform/crash.*.log
+terraform/.terraformrc
+terraform/terraform.rc
+
+# Kubernetes secrets (generated)
+k8s/secrets-generated.yaml

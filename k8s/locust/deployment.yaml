@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: locust-master
+  namespace: load-testing
+  labels:
+    app: locust
+    role: master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: locust
+      role: master
+  template:
+    metadata:
+      labels:
+        app: locust
+        role: master
+    spec:
+      containers:
+      - name: locust
+        image: locustio/locust:2.17.0
+        env:
+        - name: LOCUST_MODE
+          value: "master"
+        - name: TARGET_HOST
+          value: "http://API_GATEWAY_LB_URL"  # Replace with actual LoadBalancer URL
+        ports:
+        - name: web
+          containerPort: 8089
+        - name: master
+          containerPort: 5557
+        volumeMounts:
+        - name: locust-scripts
+          mountPath: /home/locust
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+      volumes:
+      - name: locust-scripts
+        configMap:
+          name: locust-scripts
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: locust-worker
+  namespace: load-testing
+  labels:
+    app: locust
+    role: worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: locust
+      role: worker
+  template:
+    metadata:
+      labels:
+        app: locust
+        role: worker
+    spec:
+      containers:
+      - name: locust
+        image: locustio/locust:2.17.0
+        env:
+        - name: LOCUST_MODE
+          value: "worker"
+        - name: LOCUST_MASTER_NODE_HOST
+          value: "locust-master"
+        - name: TARGET_HOST
+          value: "http://API_GATEWAY_LB_URL"  # Replace with actual LoadBalancer URL
+        volumeMounts:
+        - name: locust-scripts
+          mountPath: /home/locust
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+      volumes:
+      - name: locust-scripts
+        configMap:
+          name: locust-scripts

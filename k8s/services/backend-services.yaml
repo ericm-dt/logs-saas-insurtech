@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: dynaclaimz
+  labels:
+    app: user-service
+spec:
+  type: ClusterIP
+  selector:
+    app: user-service
+  ports:
+  - name: http
+    port: 3001
+    targetPort: 3001
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: policy-service
+  namespace: dynaclaimz
+  labels:
+    app: policy-service
+spec:
+  type: ClusterIP
+  selector:
+    app: policy-service
+  ports:
+  - name: http
+    port: 3003
+    targetPort: 3003
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: claims-service
+  namespace: dynaclaimz
+  labels:
+    app: claims-service
+spec:
+  type: ClusterIP
+  selector:
+    app: claims-service
+  ports:
+  - name: http
+    port: 3004
+    targetPort: 3004
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotes-service
+  namespace: dynaclaimz
+  labels:
+    app: quotes-service
+spec:
+  type: ClusterIP
+  selector:
+    app: quotes-service
+  ports:
+  - name: http
+    port: 3005
+    targetPort: 3005
+    protocol: TCP
