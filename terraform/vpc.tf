@@ -30,7 +30,7 @@ module "vpc" {
 
   # NAT Gateway for private subnets to access internet
   enable_nat_gateway   = true
-  single_nat_gateway   = var.environment != "production" # Single NAT for dev/staging
+  single_nat_gateway   = true  # Single NAT Gateway (cost optimization for demo)
   enable_dns_hostnames = true
   enable_dns_support   = true
 

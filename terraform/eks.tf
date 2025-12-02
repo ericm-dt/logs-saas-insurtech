@@ -46,6 +46,7 @@ module "eks" {
         desired_size = var.node_desired_size
 
         disk_size = var.node_disk_size
+        disk_type = "gp3"
 
         # Use latest EKS optimized AMI
         ami_type = "AL2_x86_64"
@@ -80,6 +81,7 @@ module "eks" {
         desired_size = floor(var.node_desired_size * var.spot_instance_percentage / 100)
 
         disk_size = var.node_disk_size
+        disk_type = "gp3"
         
         capacity_type = "SPOT"
 
