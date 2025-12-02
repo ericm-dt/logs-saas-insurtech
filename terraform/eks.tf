@@ -35,48 +35,44 @@ module "eks" {
   subnet_ids = module.vpc.private_subnets
 
   # EKS Managed Node Groups
-  eks_managed_node_groups = {
+  eks_managed_node_groups = merge(
     # Primary node group with on-demand instances
-    primary = {
-      name           = "${var.project_name}-${var.environment}-primary"
-      instance_types = var.node_instance_types
-      
-      min_size     = var.node_min_size
-      max_size     = var.node_max_size
-      desired_size = var.node_desired_size
+    {
+      primary = {
+        instance_types = var.node_instance_types
+        
+        min_size     = var.node_min_size
+        max_size     = var.node_max_size
+        desired_size = var.node_desired_size
 
-      disk_size = var.node_disk_size
+        disk_size = var.node_disk_size
 
-      # Use latest EKS optimized AMI
-      ami_type = "AL2_x86_64"
+        # Use latest EKS optimized AMI
+        ami_type = "AL2_x86_64"
 
-      # Enable IMDSv2
-      metadata_options = {
-        http_endpoint               = "enabled"
-        http_tokens                 = "required"
-        http_put_response_hop_limit = 1
-      }
-
-      labels = {
-        Environment = var.environment
-        NodeGroup   = "primary"
-      }
-
-      tags = merge(
-        local.common_tags,
-        {
-          Name = "${var.project_name}-${var.environment}-primary-node"
+        # Enable IMDSv2
+        metadata_options = {
+          http_endpoint               = "enabled"
+          http_tokens                 = "required"
+          http_put_response_hop_limit = 1
         }
-      )
-    }
-  }
 
-  # Conditionally add spot instance node group
-  dynamic "eks_managed_node_groups" {
-    for_each = var.enable_spot_instances ? [1] : []
-    content {
+        labels = {
+          Environment = var.environment
+          NodeGroup   = "primary"
+        }
+
+        tags = merge(
+          local.common_tags,
+          {
+            Name = "${var.project_name}-${var.environment}-primary-node"
+          }
+        )
+      }
+    },
+    # Conditionally add spot instance node group
+    var.enable_spot_instances ? {
       spot = {
-        name           = "${var.project_name}-${var.environment}-spot"
         instance_types = var.node_instance_types
         
         min_size     = 0
@@ -108,8 +104,8 @@ module "eks" {
           }
         )
       }
-    }
-  }
+    } : {}
+  )
 
   # Extend cluster security group rules
   cluster_security_group_additional_rules = {
@@ -228,45 +224,6 @@ resource "aws_iam_role_policy" "cluster_autoscaler" {
       }
     ]
   })
-}
-
-# IAM role for AWS Load Balancer Controller
-resource "aws_iam_role" "aws_load_balancer_controller" {
-  name = "${var.project_name}-${var.environment}-aws-load-balancer-controller"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Federated = module.eks.oidc_provider_arn
-        }
-        Action = "sts:AssumeRoleWithWebIdentity"
-        Condition = {
-          StringEquals = {
-            "${replace(module.eks.oidc_provider, "https://", "")}:sub" = "system:serviceaccount:kube-system:aws-load-balancer-controller"
-          }
-        }
-      }
-    ]
-  })
-
-  tags = local.common_tags
-}
-
-# Attach AWS Load Balancer Controller policy
-resource "aws_iam_policy" "aws_load_balancer_controller" {
-  name = "${var.project_name}-${var.environment}-aws-load-balancer-controller"
-
-  policy = file("${path.module}/policies/aws-load-balancer-controller-policy.json")
-
-  tags = local.common_tags
-}
-
-resource "aws_iam_role_policy_attachment" "aws_load_balancer_controller" {
-  role       = aws_iam_role.aws_load_balancer_controller.name
-  policy_arn = aws_iam_policy.aws_load_balancer_controller.arn
 }
 
 # EBS CSI Driver IAM role
