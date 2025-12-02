@@ -1,7 +1,9 @@
 # Copilot Instructions for DynaClaimz Microservices
 
 ## Project Overview
-A microservices-based Insurance SaaS platform with 6 independent services communicating via REST APIs. Each service has its own database, codebase, and can be deployed independently.
+A microservices-based Insurance SaaS platform with 5 independent services communicating via REST APIs. Each service has its own database, codebase, and can be deployed independently.
+
+**Services**: API Gateway, User Service (auth + organizations), Policy Service, Claims Service, Quotes Service
 
 ## Architecture Overview
 
@@ -10,23 +12,30 @@ A microservices-based Insurance SaaS platform with 6 independent services commun
 **API Gateway (Port 3000)**
 - Entry point for all client requests
 - Routes to backend services
-- Handles CORS, rate limiting, security headers
+- Handles CORS, rate limiting (1000 requests/min), security headers
 - No database
+- Aggregates Swagger documentation from all services
 
-**Auth Service (Port 3001)**
+**User Service (Port 3001)** - Built from auth-service directory
 - User authentication & JWT management
-- Database: `auth_db` (users table)
-- Exposes: `/api/auth/*` endpoints
+- Organization management (multi-tenancy)
+- Database: `user_db` (users, organizations tables)
+- Exposes: `/api/auth/*` and `/api/organizations/*` endpoints
 
-**Customer Service (Port 3002)**
-- Customer profile management
-- Database: `customer_db` (customers table)
-- Depends on: Auth Service (token validation)
+**Policy Service (Port 3003)**
+- Policy management and status tracking
+- Database: `policy_db` (policies, policy_status_history tables)
+- Depends on: User Service (token validation)
 
-**Policy/Claims/Quotes Services (Ports 3003-3005)**
-- Domain-specific business logic
-- Each has own database
-- Follow same patterns as Customer Service
+**Claims Service (Port 3004)**
+- Claims processing and workflow
+- Database: `claims_db` (claims, claim_status_history tables)
+- Depends on: User Service (auth), Policy Service (validation)
+
+**Quotes Service (Port 3005)**
+- Quote generation and conversion to policies
+- Database: `quotes_db` (quotes table)
+- Depends on: User Service (auth), Policy Service (conversion)
 
 ### Communication Patterns
 
@@ -48,13 +57,14 @@ Client → API Gateway → Service → Auth Service (verify token)
 ```
 services/
 ├── api-gateway/           # Routes requests, no DB
-├── auth-service/          # Auth + users DB
-├── customer-service/      # Customers + customer_db
+├── auth-service/          # User service (users + organizations + user_db)
 ├── policy-service/        # Policies + policy_db
 ├── claims-service/        # Claims + claims_db
 ├── quotes-service/        # Quotes + quotes_db
 └── shared/                # Shared types & utilities
 ```
+
+**Note**: The `auth-service` directory builds the "user-service" container in docker-compose.yml
 
 Each service directory contains:
 ```
@@ -128,18 +138,35 @@ npm run dev  # Starts on port 3001
 // src/middleware/auth.middleware.ts
 import axios from 'axios';
 
-export async function authMiddleware(req, res, next) {
+export interface AuthRequest extends Request {
+  user?: {
+    userId: string;
+    email: string;
+    role: 'admin' | 'agent' | 'customer';
+    organizationId: string;  // Critical for multi-tenancy
+  };
+}
+
+export async function authenticate(req: AuthRequest, res, next) {
   const token = req.headers.authorization?.replace('Bearer ', '');
   
-  // Call Auth Service to verify
-  const authServiceUrl = process.env.AUTH_SERVICE_URL;
-  const response = await axios.post(`${authServiceUrl}/api/auth/verify`, { token });
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'No token provided' });
+  }
   
-  if (response.data.success) {
-    req.user = response.data.data;  // { userId, email, role }
-    next();
-  } else {
-    res.status(401).json({ success: false, message: 'Unauthorized' });
+  // Call User Service to verify (in production, could verify JWT locally)
+  const authServiceUrl = process.env.AUTH_SERVICE_URL || process.env.USER_SERVICE_URL;
+  try {
+    const response = await axios.post(`${authServiceUrl}/api/auth/verify`, { token });
+    
+    if (response.data.success) {
+      req.user = response.data.data;  // { userId, email, role, organizationId }
+      next();
+    } else {
+      res.status(401).json({ success: false, message: 'Invalid token' });
+    }
+  } catch (error) {
+    res.status(401).json({ success: false, message: 'Token verification failed' });
   }
 }
 ```
@@ -150,9 +177,9 @@ export async function authMiddleware(req, res, next) {
 import axios from 'axios';
 
 // Validate customer exists before creating policy
-const customerServiceUrl = process.env.CUSTOMER_SERVICE_URL;
+const userServiceUrl = process.env.USER_SERVICE_URL;
 const response = await axios.get(
-  `${customerServiceUrl}/api/customers/${customerId}`,
+  `${userServiceUrl}/api/customers/${customerId}`,
   { headers: { Authorization: `Bearer ${token}` } }
 );
 
@@ -161,17 +188,63 @@ if (!response.data.success) {
 }
 ```
 
+### Multi-Tenant Data Filtering
+
+**Critical pattern**: Always filter by organizationId for tenant isolation:
+
+```typescript
+// Good - filters by organization
+const policies = await prisma.policy.findMany({
+  where: {
+    organizationId: (req as AuthRequest).user!.organizationId
+  }
+});
+
+// Bad - would leak data across tenants
+const policies = await prisma.policy.findMany({});
+```
+
+**Security**: Services validate organizationId matches between related entities:
+```typescript
+// Example from claims service - validate policy belongs to same org
+if (policy.organizationId !== req.user!.organizationId) {
+  return res.status(403).json({ 
+    success: false, 
+    message: 'Policy belongs to a different organization' 
+  });
+}
+```
+
 ### Prisma Schema (Per Service)
 
-Each service owns its data - no foreign keys to other service databases:
+Each service owns its data - no foreign keys to other service databases.
+**All entities include `organizationId` for multi-tenant isolation**:
 
 ```prisma
 // policy-service/prisma/schema.prisma
 model Policy {
-  id           String @id @default(uuid())
-  customerId   String  // Reference only, not FK
-  policyNumber String @unique
+  id              String   @id @default(uuid())
+  organizationId  String   // Multi-tenant isolation - REQUIRED
+  userId          String   // Creator reference (not FK)
+  policyNumber    String   @unique
+  status          String   // ACTIVE, CANCELLED, EXPIRED
   // ... fields
+  
+  @@index([organizationId])  // Critical for query performance
+  @@index([organizationId, status])
+}
+
+model PolicyStatusHistory {
+  id              String   @id @default(uuid())
+  policyId        String
+  organizationId  String   // Denormalized for filtering
+  oldStatus       String
+  newStatus       String
+  changedBy       String   // userId reference
+  // ... fields
+  
+  @@index([organizationId])
+  @@index([policyId])
 }
 ```
 
@@ -199,7 +272,10 @@ service-name:
 
 Add to `scripts/init-databases.sql`:
 ```sql
-CREATE DATABASE new_service_db;
+CREATE DATABASE user_db;
+CREATE DATABASE policy_db;
+CREATE DATABASE claims_db;
+CREATE DATABASE quotes_db;
 ```
 
 ### Migrations
@@ -278,11 +354,15 @@ curl http://localhost:3000/api/v1/customers \
 
 ## Common Pitfalls
 
-1. **Service can't reach other service**: Check `docker-compose.yml` network and service names
+1. **Service can't reach other service**: Check `docker-compose.yml` network (`dynaclaimz-network`) and service names
 2. **Database migration fails**: Ensure PostgreSQL is healthy before services start
 3. **Auth token not forwarded**: Verify proxy middleware forwards Authorization header
 4. **Port conflicts**: Each service needs unique port in docker-compose
 5. **Circular dependencies**: Don't create dependency loops in `depends_on`
+6. **Multi-tenant data leak**: Always filter queries by `organizationId` from JWT
+7. **Wrong validation in claims**: Validate `organizationId` match, NOT `userId` (allows agents to work on org policies)
+8. **Decimal fields from Prisma**: Convert to `float()` before math operations (e.g., `claimAmount`)
+9. **Network name change**: After changing network name in docker-compose, must run `docker compose down && docker compose up`
 
 ## Migration from Monolith
 

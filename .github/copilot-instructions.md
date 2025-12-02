@@ -1,26 +1,40 @@
 # Copilot Instructions for DynaClaimz SaaS API
 
 ## Project Overview
-This is a RESTful API service for an Insurance SaaS platform built with Node.js, TypeScript, and Express. It provides core insurance operations including policy management, claims processing, customer management, and quote generation.
+This is a microservices-based Insurance SaaS platform built with Node.js, TypeScript, and Express. The platform consists of 5 independent services (User, Policy, Claims, Quotes, API Gateway) plus shared utilities. Each service has its own database and can be deployed independently.
+
+**Important**: This project uses a **microservices architecture**. See `.github/copilot-instructions-microservices.md` for detailed microservices patterns and service-to-service communication.
 
 ## Architecture
 
-### Domain-Driven Structure
-The codebase follows a layered architecture pattern:
+### Microservices Structure
+The project is organized as separate services, each with its own codebase:
 
 ```
-src/
-├── controllers/     # HTTP request handlers - thin layer that delegates to services
-├── services/       # Business logic (e.g., authService handles JWT, password hashing)
-├── models/         # Data access layer - uses Prisma ORM for PostgreSQL
-├── routes/         # Express route definitions with middleware composition
-├── middleware/     # Cross-cutting concerns (auth, validation, error handling, logging)
-├── types/          # TypeScript interfaces and enums for type safety
-├── utils/          # Shared utilities (logger, response helpers, error classes)
-└── config/         # Environment-based configuration and Prisma client
-prisma/
-├── schema.prisma   # Database schema with models, relations, and indexes
-└── seed.ts         # Database seeding script for development/testing
+services/
+├── api-gateway/        # Port 3000 - Routes all client requests
+├── auth-service/       # Port 3001 - User service (users + organizations)
+│   ├── src/           # Source code
+│   ├── prisma/        # Database schema for user_db
+│   └── Dockerfile     # Container definition
+├── policy-service/     # Port 3003 - Policy management + policy_db
+├── claims-service/     # Port 3004 - Claims processing + claims_db
+├── quotes-service/     # Port 3005 - Quote generation + quotes_db
+└── shared/            # Shared TypeScript types and utilities
+```
+
+Each service follows a layered architecture pattern:
+```
+service/
+├── src/
+│   ├── server.ts      # Express app entry point
+│   ├── routes/        # Route definitions
+│   ├── services/      # Business logic (where applicable)
+│   └── middleware/    # Auth validation middleware
+├── prisma/
+│   └── schema.prisma  # Service-specific database schema
+├── Dockerfile
+└── package.json
 ```
 
 ### Key Architectural Patterns
@@ -33,10 +47,15 @@ prisma/
 - Schema location: `prisma/schema.prisma` defines all tables, relations, indexes
 
 **Database Relationships:**
-- Customer → Policies (one-to-many) with cascade delete
-- Customer → Claims (one-to-many) with cascade delete  
-- Customer → Quotes (one-to-many) with cascade delete
-- Policy → Claims (one-to-many) with cascade delete
+- **Multi-tenant architecture**: All entities have `organizationId` for tenant isolation
+- User belongs to Organization (many-to-one)
+- Organization → Users (one-to-many)
+- Organization → Policies (one-to-many, denormalized across services)
+- Organization → Claims (one-to-many, denormalized across services)
+- Organization → Quotes (one-to-many, denormalized across services)
+- Policy → Claims (one-to-many, within claims service)
+
+**Important**: Services don't use foreign keys to other service databases. They use `organizationId` and entity IDs as string references.
 
 **Prisma Commands:**
 ```bash
@@ -78,8 +97,12 @@ npm install
 cp .env.example .env
 # Edit .env with your JWT_SECRET and DATABASE_URL
 
-# Set up PostgreSQL database (ensure PostgreSQL is running)
-# Example DATABASE_URL: postgresql://username:password@localhost:5432/dynaclaimz_db
+# Set up PostgreSQL databases (ensure PostgreSQL is running)
+# Four separate databases:
+# - user_db (users, organizations)
+# - policy_db (policies, policy status history)
+# - claims_db (claims, claim status history)
+# - quotes_db (quotes)
 
 # Generate Prisma Client
 npm run prisma:generate
@@ -93,19 +116,24 @@ npm run db:seed
 
 ### Development Commands
 ```bash
+# Docker Compose (recommended for full stack)
+docker compose up --build     # Start all services
+docker compose down           # Stop all services
+docker compose logs -f <service>  # View service logs
+
+# Individual service development
+cd services/policy-service
 npm run dev          # Start with hot reload (ts-node-dev)
 npm run build        # Compile TypeScript to dist/
 npm start            # Run compiled JS from dist/
 npm test             # Run Jest tests
 npm run lint         # ESLint check
 npm run lint:fix     # Auto-fix linting issues
-npm run format       # Prettier formatting
 
-# Database commands
+# Database commands (per service)
 npm run prisma:generate    # Generate Prisma Client
 npm run prisma:migrate     # Create and run migrations
 npm run db:push            # Push schema without migration (dev)
-npm run db:seed            # Seed database
 npm run prisma:studio      # Open database GUI
 ```
 
@@ -183,11 +211,17 @@ Note: Currently not working due to module resolution - use relative paths for no
 ## DynaClaimz Domain Model
 
 ### Core Entities
-- **User**: Authentication entity with role (admin/agent/customer)
-- **Customer**: Business entity separate from User - contains insurance-specific data
-- **Policy**: Insurance policy with type (auto/home/life/health/business) and status
-- **Claim**: Claim against a policy with workflow status (submitted → under_review → approved/denied → paid)
-- **Quote**: Temporary quote with expiration date (30 days) - can be converted to policy
+- **Organization**: Multi-tenant entity - all data belongs to an organization
+- **User**: Authentication entity with role (admin/agent/customer) - belongs to organization
+- **Policy**: Insurance policy with type (auto/home/life/health/business) and status - belongs to organization
+- **Claim**: Claim against a policy with workflow status (submitted → under_review → approved/denied → paid) - belongs to organization
+- **Quote**: Temporary quote with expiration date (30 days) - can be converted to policy - belongs to organization
+
+### Multi-Tenant Security
+- All API requests are scoped to the authenticated user's `organizationId`
+- JWT tokens contain: `userId`, `email`, `role`, `organizationId`
+- Services filter all queries by `organizationId` to ensure tenant isolation
+- **Critical**: Claims service validates `policy.organizationId === user.organizationId` (NOT userId)
 
 ### Business Logic Locations
 - **Premium Calculation**: `QuoteController.create()` - simple 1.5% of coverage (replace with real actuarial logic)
