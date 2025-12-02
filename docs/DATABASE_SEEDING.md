@@ -300,7 +300,7 @@ Total: 900+ records, zero observability data
    ✅ Foundation data only
    
 2. Run load generator:
-   - Login (auth-service) → JWT
+   - Login (user-service) → JWT
    - Create quote (quotes-service) → Distributed trace
    - Convert quote (quotes→policy cross-service) → Full trace
    - File claim (policy→claims cross-service) → Full trace
@@ -447,7 +447,7 @@ load-generator:
 ```
 
 ### 3. Export Seeded Users for Load Tests
-**File**: `services/auth-service/prisma/seed.ts` (modify)
+**File**: `services/user-service/prisma/seed.ts` (modify)
 ```typescript
 // After seeding, export users to JSON for load tests
 const users = await prisma.user.findMany({
@@ -480,7 +480,7 @@ fs.writeFileSync('../../load-tests/seeded-users.json', JSON.stringify(users, nul
 ## Completed Work
 
 ### 1. Auth Service Seeding ✅
-**File**: `services/auth-service/prisma/seed.ts`
+**File**: `services/user-service/prisma/seed.ts`
 
 **Features**:
 - 30 realistic organization names (Acme Insurance, Guardian Life, SafetyFirst Insurance, etc.)

@@ -82,12 +82,12 @@ docker run --name postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgre
 psql -U postgres -h localhost -f scripts/init-databases.sql
 
 # 3. Install dependencies for each service
-cd services/auth-service && npm install && npm run prisma:generate && npm run prisma:migrate
+cd services/user-service && npm install && npm run prisma:generate && npm run prisma:migrate
 cd ../customer-service && npm install && npm run prisma:generate && npm run prisma:migrate
 cd ../api-gateway && npm install
 
 # 4. Start services in separate terminals
-cd services/auth-service && npm run dev          # Terminal 1
+cd services/user-service && npm run dev          # Terminal 1
 cd services/customer-service && npm run dev      # Terminal 2
 cd services/api-gateway && npm run dev           # Terminal 3
 # ... repeat for other services
@@ -134,7 +134,7 @@ services/
 │   ├── src/
 │   ├── Dockerfile
 │   └── package.json
-├── auth-service/         # Authentication service
+├── user-service/         # Authentication service
 │   ├── src/
 │   ├── prisma/
 │   ├── Dockerfile
@@ -203,7 +203,7 @@ MICROSERVICES_ARCHITECTURE.md  # Architecture documentation
 docker-compose logs -f
 
 # View specific service
-docker-compose logs -f auth-service
+docker-compose logs -f user-service
 
 # Health checks
 curl http://localhost:3000/health  # Gateway

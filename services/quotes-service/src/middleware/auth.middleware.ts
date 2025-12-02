@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import axios from 'axios';
 
-const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://localhost:3001';
+const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://localhost:3001';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -31,8 +31,8 @@ export async function authenticate(
 
     const token = authHeader.substring(7);
 
-    // Verify token with auth service
-    const response = await axios.post(`${AUTH_SERVICE_URL}/api/auth/verify`, {
+    // Verify token with user service
+    const response = await axios.post(`${USER_SERVICE_URL}/api/auth/verify`, {
       token
     });
 

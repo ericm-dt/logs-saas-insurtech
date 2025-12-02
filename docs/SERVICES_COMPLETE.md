@@ -93,7 +93,7 @@ That's it! All 6 services are running.
 ```
 services/
 ├── api-gateway/       ✅ Complete
-├── auth-service/      ✅ Complete
+├── user-service/      ✅ Complete
 ├── customer-service/  ✅ Complete
 ├── policy-service/    ✅ Complete (NEW)
 ├── claims-service/    ✅ Complete (NEW)

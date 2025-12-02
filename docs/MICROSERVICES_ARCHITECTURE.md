@@ -67,7 +67,7 @@
 ```
 services/
 ├── api-gateway/          # API Gateway
-├── auth-service/         # Authentication
+├── user-service/         # Authentication
 ├── customer-service/     # Customer management
 ├── policy-service/       # Policy management
 ├── claims-service/       # Claims processing

@@ -52,7 +52,7 @@ Authorization: Bearer {token}
 ```
 
 **Observability Signals**:
-- 6 HTTP requests across 2 services (auth-service, quotes-service, policy-service)
+- 6 HTTP requests across 2 services (user-service, quotes-service, policy-service)
 - Cross-service call: quotes-service → policy-service
 - Database writes: 1 quote, 1 policy, 1 quote status history
 - Trace spans: auth validation, premium calculation, quote creation, policy creation

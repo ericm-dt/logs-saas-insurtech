@@ -84,8 +84,8 @@ CREATE DATABASE claims_db;
 CREATE DATABASE quotes_db;
 EOF
 
-# Terminal 3: Auth Service
-cd services/auth-service
+# Terminal 3: User Service
+cd services/user-service
 cp .env.example .env
 npm install
 npm run prisma:generate
@@ -150,7 +150,7 @@ docker-compose down
 docker-compose down -v
 
 # Stop individual service
-docker-compose stop auth-service
+docker-compose stop user-service
 ```
 
 ## Scaling Services
@@ -171,7 +171,7 @@ docker-compose up --scale customer-service=3
 docker-compose logs -f
 
 # Specific service
-docker-compose logs -f auth-service
+docker-compose logs -f user-service
 
 # API Gateway
 docker-compose logs -f api-gateway
@@ -202,7 +202,7 @@ curl http://localhost:3005/health
 
 ### Inter-Service Communication Failures
 - Verify services are on same network: `docker network inspect dynaclaimz-network`
-- Check service names resolve: `docker-compose exec api-gateway ping auth-service`
+- Check service names resolve: `docker-compose exec api-gateway ping user-service`
 
 ## Production Considerations
 

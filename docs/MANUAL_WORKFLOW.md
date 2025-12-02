@@ -407,4 +407,4 @@ curl -X GET http://localhost:3000/api/v1/policies/$POLICY_ID \
 Quotes expire 30 days after creation. Check the `expiresAt` field before converting.
 
 ### Authentication Failed
-Ensure `AUTH_SERVICE_URL` environment variable is set for all services in docker-compose.yml.
+Ensure `USER_SERVICE_URL` environment variable is set for all services in docker-compose.yml.

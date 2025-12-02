@@ -13,7 +13,7 @@ The project is organized as separate services, each with its own codebase:
 ```
 services/
 ├── api-gateway/        # Port 3000 - Routes all client requests
-├── auth-service/       # Port 3001 - User service (users + organizations)
+├── user-service/       # Port 3001 - User service (users + organizations)
 │   ├── src/           # Source code
 │   ├── prisma/        # Database schema for user_db
 │   └── Dockerfile     # Container definition

@@ -57,14 +57,12 @@ Client → API Gateway → Service → Auth Service (verify token)
 ```
 services/
 ├── api-gateway/           # Routes requests, no DB
-├── auth-service/          # User service (users + organizations + user_db)
+├── user-service/          # User service (users + organizations + user_db)
 ├── policy-service/        # Policies + policy_db
 ├── claims-service/        # Claims + claims_db
 ├── quotes-service/        # Quotes + quotes_db
 └── shared/                # Shared types & utilities
 ```
-
-**Note**: The `auth-service` directory builds the "user-service" container in docker-compose.yml
 
 Each service directory contains:
 ```
@@ -100,7 +98,7 @@ docker-compose logs -f <service-name>
 
 ```bash
 # Each service in separate terminal
-cd services/auth-service
+cd services/user-service
 npm install
 npm run prisma:generate
 npm run prisma:migrate
@@ -124,8 +122,8 @@ npm run dev  # Starts on port 3001
      build: ./services/new-service
      ports: ["3006:3006"]
      environment:
-       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/new_db
-       AUTH_SERVICE_URL: http://auth-service:3001
+       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/service_db
+       USER_SERVICE_URL: http://user-service:3001
      depends_on: [postgres, auth-service]
    ```
 9. **Update API Gateway** proxy routes
@@ -155,9 +153,9 @@ export async function authenticate(req: AuthRequest, res, next) {
   }
   
   // Call User Service to verify (in production, could verify JWT locally)
-  const authServiceUrl = process.env.AUTH_SERVICE_URL || process.env.USER_SERVICE_URL;
+  const userServiceUrl = process.env.USER_SERVICE_URL;
   try {
-    const response = await axios.post(`${authServiceUrl}/api/auth/verify`, { token });
+    const response = await axios.post(`${userServiceUrl}/api/auth/verify`, { token });
     
     if (response.data.success) {
       req.user = response.data.data;  // { userId, email, role, organizationId }
@@ -259,11 +257,11 @@ service-name:
   ports: ["PORT:PORT"]
   environment:
     DATABASE_URL: postgresql://postgres:postgres@postgres:5432/service_db
-    AUTH_SERVICE_URL: http://auth-service:3001
+    USER_SERVICE_URL: http://user-service:3001
     OTHER_SERVICE_URL: http://other-service:3002
   depends_on:
     postgres: { condition: service_healthy }
-    auth-service: { condition: service_started }
+    user-service: { condition: service_started }
 ```
 
 ## Database Management
@@ -282,7 +280,7 @@ CREATE DATABASE quotes_db;
 
 Each service runs migrations independently:
 ```bash
-cd services/auth-service
+cd services/user-service
 npm run prisma:migrate
 ```
 
@@ -315,7 +313,7 @@ app.use('/api/v1/new-resource', createProxyMiddleware({
 ## Code Conventions
 
 ### Service Naming
-- Kebab-case for directories: `auth-service`, `customer-service`
+- Kebab-case for directories: `user-service`, `policy-service`
 - Port numbers: Gateway=3000, Services=3001-3009
 - Database names: `<service>_db` (e.g., `auth_db`)
 
@@ -324,7 +322,7 @@ Every service needs:
 ```env
 PORT=300X
 DATABASE_URL=postgresql://...
-AUTH_SERVICE_URL=http://auth-service:3001
+USER_SERVICE_URL=http://user-service:3001
 NODE_ENV=development
 ```
 
@@ -389,13 +387,13 @@ If migrating from monolithic version:
 
 ```bash
 # View service logs
-docker-compose logs -f auth-service
+docker-compose logs -f user-service
 
 # Exec into service container
-docker-compose exec auth-service sh
+docker-compose exec user-service sh
 
 # Check network connectivity
-docker-compose exec api-gateway ping auth-service
+docker-compose exec api-gateway ping user-service
 
 # Restart service
 docker-compose restart customer-service

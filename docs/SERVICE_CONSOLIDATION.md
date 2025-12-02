@@ -21,7 +21,7 @@ Successfully merged the `auth-service` and `customer-service` into a single `use
 
 ### 1. Database Schema Updates
 
-#### User Service (`services/auth-service/prisma/schema.prisma`)
+#### User Service (`services/user-service/prisma/schema.prisma`)
 ```prisma
 model User {
   id             String    @id @default(uuid())
@@ -81,7 +81,7 @@ All services updated to use `USER_SERVICE_URL` instead of `CUSTOMER_SERVICE_URL`
 - `prisma-studio-auth` (old port 5555)
 
 #### Renamed Services
-- `auth-service` → `user-service` (port 3001, database: user_db)
+- `user-service` (port 3001, database: user_db)
 
 #### Prisma Studio Ports
 - `prisma-studio-user`: http://localhost:5555 (user_db)
@@ -124,8 +124,8 @@ Updated to remove customer-service references:
 ```json
 {
   "scripts": {
-    "install:services": "cd services/auth-service && npm install && cd ../policy-service && npm install ...",
-    "dev:user": "cd services/auth-service && npm run dev",
+    "install:services": "cd services/user-service && npm install && cd ../policy-service && npm install ...",
+    "dev:user": "cd services/user-service && npm run dev",
     // Removed: "dev:customer"
   }
 }
@@ -189,15 +189,15 @@ No migration needed - `prisma db push` will create the new schema on startup.
 ## Files Modified
 
 ### Prisma Schemas
-- ✅ `services/auth-service/prisma/schema.prisma` - Added customer fields to User
+- ✅ `services/user-service/prisma/schema.prisma` - Added customer fields to User
 - ✅ `services/policy-service/prisma/schema.prisma` - customerId → userId
 - ✅ `services/claims-service/prisma/schema.prisma` - customerId → userId
 - ✅ `services/quotes-service/prisma/schema.prisma` - customerId → userId
 
 ### Service Code
-- ✅ `services/auth-service/src/routes/user.routes.ts` - NEW: User CRUD routes
-- ✅ `services/auth-service/src/server.ts` - Added /api/users routes
-- ✅ `services/auth-service/src/services/auth.service.ts` - Accept customer data in register()
+- ✅ `services/user-service/src/routes/user.routes.ts` - NEW: User CRUD routes
+- ✅ `services/user-service/src/server.ts` - Added /api/users routes
+- ✅ `services/user-service/src/services/auth.service.ts` - Accept customer data in register()
 - ✅ `services/policy-service/src/routes/policy.routes.ts` - USER_SERVICE_URL, userId
 - ✅ `services/claims-service/src/routes/claim.routes.ts` - USER_SERVICE_URL, userId
 - ✅ `services/quotes-service/src/routes/quote.routes.ts` - USER_SERVICE_URL, userId
@@ -219,7 +219,7 @@ No migration needed - `prisma db push` will create the new schema on startup.
 
 ```
 services/
-  auth-service/          # NOW SERVES AS USER-SERVICE
+  user-service/          # USER SERVICE
     prisma/schema.prisma # User model with customer fields
     src/
       routes/

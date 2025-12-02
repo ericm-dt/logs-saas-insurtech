@@ -21,7 +21,7 @@ services:
   # User Service (formerly auth-service + customer-service)
   user-service:
     build:
-      context: ./services/auth-service
+      context: ./services/user-service
       dockerfile: Dockerfile
     ports:
       - "3001:3001"
@@ -46,7 +46,6 @@ services:
       PORT: 3003
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/policy_db
       USER_SERVICE_URL: http://user-service:3001
-      AUTH_SERVICE_URL: http://user-service:3001
     depends_on:
       postgres:
         condition: service_healthy
@@ -65,7 +64,6 @@ services:
       PORT: 3004
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/claims_db
       USER_SERVICE_URL: http://user-service:3001
-      AUTH_SERVICE_URL: http://user-service:3001
       POLICY_SERVICE_URL: http://policy-service:3003
     depends_on:
       postgres:
@@ -87,7 +85,6 @@ services:
       PORT: 3005
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/quotes_db
       USER_SERVICE_URL: http://user-service:3001
-      AUTH_SERVICE_URL: http://user-service:3001
       POLICY_SERVICE_URL: http://policy-service:3003
     depends_on:
       postgres:
@@ -127,7 +124,7 @@ services:
     ports:
       - "5555:5555"
     volumes:
-      - ./services/auth-service/prisma:/app/prisma
+      - ./services/user-service/prisma:/app/prisma
     depends_on:
       postgres:
         condition: service_healthy
