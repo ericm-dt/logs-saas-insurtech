@@ -364,7 +364,7 @@ router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: Auth
     }
 
     // Call policy service to create policy
-    const POLICY_SERVICE_URL = process.env.POLICY_SERVICE_URL || 'http://localhost:3003';
+    const POLICY_SERVICE_URL = process.env.POLICY_SERVICE_URL || 'http://policy-service:3003';
     const token = req.headers.authorization?.substring(7) || '';
 
     try {

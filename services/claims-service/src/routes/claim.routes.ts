@@ -7,7 +7,7 @@ import axios from 'axios';
 const router = Router();
 const prisma = new PrismaClient();
 
-const POLICY_SERVICE_URL = process.env.POLICY_SERVICE_URL || 'http://localhost:3003';
+const POLICY_SERVICE_URL = process.env.POLICY_SERVICE_URL || 'http://policy-service:3003';
 
 // Validation middleware
 const validate = (validations: ValidationChain[]) => {
