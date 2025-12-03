@@ -57,3 +57,4 @@ terraform/terraform.rc
 
 # Kubernetes secrets (generated)
 k8s/secrets-generated.yaml
+k8s/secrets.yaml

@@ -27,7 +27,7 @@ async function aggregateSpecs() {
       },
       servers: [
         {
-          url: 'http://localhost:3000',
+          url: process.env.PUBLIC_URL || 'http://localhost:3000',
           description: 'API Gateway',
         },
       ],

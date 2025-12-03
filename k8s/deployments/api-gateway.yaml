@@ -69,6 +69,11 @@ spec:
             configMapKeyRef:
               name: app-config
               key: ALLOWED_ORIGINS
+        - name: PUBLIC_URL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: PUBLIC_URL
         - name: PROXY_TIMEOUT
           valueFrom:
             configMapKeyRef:
