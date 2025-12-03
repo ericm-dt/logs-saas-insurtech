@@ -1,0 +1,42 @@
+# Manual database seeding job
+# Only run this manually when you want to seed the database
+# kubectl apply -f k8s/db-seed-job.yaml
+# 
+# WARNING: This will insert sample data. Only use in dev/staging!
+# Delete after running: kubectl delete job db-seed -n dynaclaimz
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-seed
+  namespace: dynaclaimz
+  labels:
+    app: db-seed
+spec:
+  ttlSecondsAfterFinished: 3600 # Clean up after 1 hour
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: db-seed
+    spec:
+      restartPolicy: Never
+      containers:
+      # Seed user database
+      - name: seed-user-db
+        image: 446130280781.dkr.ecr.us-east-1.amazonaws.com/dynaclaimz/user-service
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: USER_DB_URL
+        - name: NODE_ENV
+          value: "development"
+        command:
+        - sh
+        - -c
+        - |
+          echo "Seeding user database..."
+          npm run seed
+          echo "User database seeded successfully"

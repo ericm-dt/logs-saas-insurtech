@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: locust
-        image: locustio/locust:2.17.0
+        image: 446130280781.dkr.ecr.us-east-1.amazonaws.com/dynaclaimz/locust:latest
         env:
         - name: LOCUST_MODE
           value: "master"
@@ -31,9 +31,6 @@ spec:
           containerPort: 8089
         - name: master
           containerPort: 5557
-        volumeMounts:
-        - name: locust-scripts
-          mountPath: /home/locust
         resources:
           requests:
             cpu: 100m
@@ -41,10 +38,6 @@ spec:
           limits:
             cpu: 500m
             memory: 512Mi
-      volumes:
-      - name: locust-scripts
-        configMap:
-          name: locust-scripts
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -55,7 +48,7 @@ metadata:
     app: locust
     role: worker
 spec:
-  replicas: 3
+  replicas: 5  # Increased for continuous realistic load
   selector:
     matchLabels:
       app: locust
@@ -68,7 +61,7 @@ spec:
     spec:
       containers:
       - name: locust
-        image: locustio/locust:2.17.0
+        image: 446130280781.dkr.ecr.us-east-1.amazonaws.com/dynaclaimz/locust:latest
         env:
         - name: LOCUST_MODE
           value: "worker"
@@ -76,9 +69,6 @@ spec:
           value: "locust-master"
         - name: TARGET_HOST
           value: "http://API_GATEWAY_LB_URL"  # Replace with actual LoadBalancer URL
-        volumeMounts:
-        - name: locust-scripts
-          mountPath: /home/locust
         resources:
           requests:
             cpu: 200m
@@ -86,7 +76,3 @@ spec:
           limits:
             cpu: 1000m
             memory: 1Gi
-      volumes:
-      - name: locust-scripts
-        configMap:
-          name: locust-scripts

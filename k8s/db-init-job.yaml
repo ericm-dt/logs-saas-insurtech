@@ -20,19 +20,15 @@ spec:
         image: postgres:14
         env:
         - name: PGHOST
-          value: "RDS_ENDPOINT_HERE" # Replace with actual RDS endpoint
+          value: "dynaclaimz-production-postgres.cu74jnjiqssw.us-east-1.rds.amazonaws.com"
         - name: PGPORT
           value: "5432"
         - name: PGUSER
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: DB_USERNAME
+          value: "dynaclaimz_admin"
         - name: PGPASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: DB_PASSWORD
+          value: "river-9-orange-lamp"
+        - name: PGDATABASE
+          value: "postgres"
         command:
         - sh
         - -c
@@ -55,7 +51,7 @@ spec:
       containers:
       # Run Prisma migrations for user-service
       - name: migrate-user-db
-        image: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/dynaclaimz/user-service:latest
+        image: 446130280781.dkr.ecr.us-east-1.amazonaws.com/dynaclaimz/user-service
         env:
         - name: DATABASE_URL
           valueFrom:
@@ -69,10 +65,15 @@ spec:
           echo "Running user-service migrations..."
           npx prisma migrate deploy
           echo "User service migrations complete"
+          
+          # Uncomment below to seed the database (only for dev/staging)
+          # echo "Seeding user database..."
+          # npm run seed
+          # echo "User database seeded"
       
       # Run Prisma migrations for policy-service
       - name: migrate-policy-db
-        image: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/dynaclaimz/policy-service:latest
+        image: 446130280781.dkr.ecr.us-east-1.amazonaws.com/dynaclaimz/policy-service
         env:
         - name: DATABASE_URL
           valueFrom:
@@ -86,10 +87,15 @@ spec:
           echo "Running policy-service migrations..."
           npx prisma migrate deploy
           echo "Policy service migrations complete"
+          
+          # Uncomment below to seed the database (only for dev/staging)
+          # echo "Seeding policy database..."
+          # npm run db:seed
+          # echo "Policy database seeded"
       
       # Run Prisma migrations for claims-service
       - name: migrate-claims-db
-        image: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/dynaclaimz/claims-service:latest
+        image: 446130280781.dkr.ecr.us-east-1.amazonaws.com/dynaclaimz/claims-service
         env:
         - name: DATABASE_URL
           valueFrom:
@@ -103,10 +109,15 @@ spec:
           echo "Running claims-service migrations..."
           npx prisma migrate deploy
           echo "Claims service migrations complete"
+          
+          # Uncomment below to seed the database (only for dev/staging)
+          # echo "Seeding claims database..."
+          # npm run db:seed
+          # echo "Claims database seeded"
       
       # Run Prisma migrations for quotes-service
       - name: migrate-quotes-db
-        image: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/dynaclaimz/quotes-service:latest
+        image: 446130280781.dkr.ecr.us-east-1.amazonaws.com/dynaclaimz/quotes-service
         env:
         - name: DATABASE_URL
           valueFrom:
@@ -120,3 +131,8 @@ spec:
           echo "Running quotes-service migrations..."
           npx prisma migrate deploy
           echo "Quotes service migrations complete"
+          
+          # Uncomment below to seed the database (only for dev/staging)
+          # echo "Seeding quotes database..."
+          # npm run db:seed
+          # echo "Quotes database seeded"

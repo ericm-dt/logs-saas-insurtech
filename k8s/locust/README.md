@@ -1,57 +1,75 @@
-# Locust Load Testing Deployment
+# Locust Continuous Load Generator
 
-This deploys Locust load testing framework to the `load-testing` namespace in your EKS cluster.
+This deploys Locust to generate **continuous realistic load** for observability data generation in the `load-testing` namespace.
+
+## Purpose
+
+**NOT for load testing** - This runs 24/7 to simulate real user traffic and generate:
+- Application metrics (request rates, latencies, errors)
+- Distributed tracing data
+- Log aggregation patterns
+- Database query patterns
 
 ## Architecture
 
 - **Namespace**: `load-testing` (isolated from application)
 - **Locust Master**: 1 replica - web UI and coordination
-- **Locust Workers**: 3 replicas - generate actual load
+- **Locust Workers**: 5 replicas - generate continuous load
 - **External Traffic**: Hits API Gateway via public LoadBalancer (simulates real users)
+- **Service Type**: ClusterIP (access UI via kubectl port-forward)
 
 ## Deployment Steps
 
-### 1. Get API Gateway LoadBalancer URL
+### 1. Build and Push Locust Image (included in Skaffold)
+
+The Locust image with all your custom code (behaviors/, utils/, etc.) will be built and pushed automatically when you run Skaffold.
+
+### 2. Get API Gateway LoadBalancer URL
 
 ```bash
 kubectl get svc api-gateway -n dynaclaimz -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
 ```
 
-### 2. Update Deployment with LB URL
+### 3. Update Deployment with LB URL
 
-Edit `k8s/locust/deployment.yaml` and replace `API_GATEWAY_LB_URL` with the actual LoadBalancer hostname:
+```bash
+# Get the LB URL
+LB_URL=$(kubectl get svc api-gateway -n dynaclaimz -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 
-```yaml
-- name: TARGET_HOST
-  value: "http://a1234567890abcdef.us-west-2.elb.amazonaws.com"
+# Update the deployment file
+sed -i '' "s|http://API_GATEWAY_LB_URL|http://$LB_URL|g" k8s/locust/deployment.yaml
 ```
 
-### 3. Deploy Locust
+### 4. Deploy Locust
 
 ```bash
 kubectl apply -f k8s/locust/namespace.yaml
-kubectl apply -f k8s/locust/configmap.yaml
 kubectl apply -f k8s/locust/deployment.yaml
 kubectl apply -f k8s/locust/service.yaml
 ```
 
-### 4. Get Locust Web UI URL
+### 4. Access Locust Web UI
+
+Since we use ClusterIP (no LoadBalancer cost), access via port-forward:
 
 ```bash
-kubectl get svc locust-master -n load-testing
+kubectl port-forward -n load-testing svc/locust-master 8089:8089
 ```
 
-Wait for the LoadBalancer to provision (2-3 minutes), then access:
+Then open in browser:
 ```
-http://<LOCUST_LB_HOSTNAME>:8089
+http://localhost:8089
 ```
 
-## Running Tests
+## Starting Continuous Load
 
-1. Open Locust web UI in your browser
-2. Set number of users (e.g., 100)
-3. Set spawn rate (e.g., 10 users/second)
+1. Open Locust web UI: `kubectl port-forward -n load-testing svc/locust-master 8089:8089`
+2. Navigate to http://localhost:8089
+3. **Recommended settings for continuous load**:
+   - Number of users: **50-100** (moderate sustained load)
+   - Spawn rate: **5 users/second** (gradual ramp-up)
 4. Click "Start Swarming"
+5. **Leave running 24/7** - Locust will continuously generate traffic
 
 ## Monitoring
 
@@ -71,10 +89,14 @@ kubectl top pods -n load-testing
 
 ## Scaling Workers
 
-To increase load generation capacity:
+To adjust load generation capacity:
 
 ```bash
-kubectl scale deployment locust-worker -n load-testing --replicas=5
+# Increase for higher load (more observability data)
+kubectl scale deployment locust-worker -n load-testing --replicas=10
+
+# Decrease for lower load (cost savings)
+kubectl scale deployment locust-worker -n load-testing --replicas=3
 ```
 
 ## Test Scenarios
@@ -97,7 +119,10 @@ kubectl delete namespace load-testing
 
 ## Notes
 
+- **Runs continuously 24/7** to generate observability data
 - Locust hits the **external LoadBalancer**, simulating real internet traffic
-- This tests the full stack including load balancer, ingress, and all services
-- Workers can be scaled independently of the master
-- Cost: ~$0.03/hour for 3 workers (t3.medium equivalent resources)
+- Generates realistic traffic patterns for metrics, traces, and logs
+- Workers can be scaled independently to adjust load levels
+- **Cost**: ~$36/month for 5 workers running continuously (vs ~$22/month for 3 workers)
+- **LoadBalancer saved**: Using ClusterIP instead of LoadBalancer saves ~$16/month
+- Access UI via port-forward when needed to monitor or adjust load levels

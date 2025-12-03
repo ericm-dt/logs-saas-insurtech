@@ -80,7 +80,8 @@ locals {
     "user-service",
     "policy-service",
     "claims-service",
-    "quotes-service"
+    "quotes-service",
+    "locust"
   ]
   
   # VPC and subnet selection
