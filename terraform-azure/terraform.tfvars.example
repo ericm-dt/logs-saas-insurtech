@@ -1,0 +1,28 @@
+# Example Terraform variables file for Azure deployment
+# Copy this file to terraform.tfvars and customize
+
+# Project Configuration
+project_name = "dynaclaimz"
+environment  = "production"
+location     = "eastus" # or "westus2", "centralus", etc.
+
+# AKS Configuration
+aks_version      = "1.28"
+node_count       = 3
+node_vm_size     = "Standard_D2s_v3" # 2 vCPU, 8GB RAM
+node_disk_size_gb = 50
+
+# PostgreSQL Configuration
+postgres_version              = "14"
+postgres_sku_name             = "B_Standard_B2s" # Burstable, 2 vCores, 4GB RAM
+postgres_storage_mb           = 102400           # 100 GB
+postgres_backup_retention_days = 7
+
+# ACR Configuration
+create_acr = true
+acr_sku    = "Basic" # Basic, Standard, or Premium
+
+# Network Configuration
+vnet_address_space        = ["10.0.0.0/16"]
+aks_subnet_address_prefix = "10.0.0.0/20"
+db_subnet_address_prefix  = "10.0.16.0/24"
