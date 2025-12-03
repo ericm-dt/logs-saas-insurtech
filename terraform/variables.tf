@@ -65,19 +65,19 @@ variable "eks_cluster_version" {
 variable "node_instance_types" {
   description = "EC2 instance types for EKS worker nodes"
   type        = list(string)
-  default     = ["t3.medium"]
+  default     = ["t3.large"]
 }
 
 variable "node_desired_size" {
   description = "Desired number of worker nodes"
   type        = number
-  default     = 3
+  default     = 5
 }
 
 variable "node_min_size" {
   description = "Minimum number of worker nodes"
   type        = number
-  default     = 2
+  default     = 3
 }
 
 variable "node_max_size" {
