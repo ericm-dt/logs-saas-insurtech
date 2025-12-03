@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: locust-config
+  namespace: load-testing
+data:
+  # Target URL for load testing - update this with your API Gateway LoadBalancer URL
+  TARGET_HOST: "http://YOUR_API_GATEWAY_LOADBALANCER_URL"
+  
+  # Locust configuration (optional - can be configured via web UI instead)
+  # Uncomment to auto-start tests without using the web UI
+  # LOCUST_USERS: "50"           # Total number of concurrent users
+  # LOCUST_SPAWN_RATE: "5"       # Users spawned per second
+  # LOCUST_RUN_TIME: ""          # Run time (e.g., "1h", "30m") - leave empty for continuous
+  # LOCUST_HEADLESS: "true"      # Run without web UI (requires LOCUST_USERS to be set)
+  # LOCUST_AUTOSTART: "true"     # Auto-start test on launch (headless mode only)
+

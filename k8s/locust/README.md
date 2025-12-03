@@ -24,28 +24,32 @@ This deploys Locust to generate **continuous realistic load** for observability 
 
 The Locust image with all your custom code (behaviors/, utils/, etc.) will be built and pushed automatically when you run Skaffold.
 
-### 2. Get API Gateway LoadBalancer URL
+### 2. Create ConfigMap from Template
 
 ```bash
-kubectl get svc api-gateway -n dynaclaimz -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+cd k8s/locust
+cp configmap.yaml.template configmap.yaml
 ```
 
-### 3. Update Deployment with LB URL
+### 3. Get API Gateway LoadBalancer URL and Update ConfigMap
 
 ```bash
 # Get the LB URL
 LB_URL=$(kubectl get svc api-gateway -n dynaclaimz -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 
-# Update the deployment file
-sed -i '' "s|http://API_GATEWAY_LB_URL|http://$LB_URL|g" k8s/locust/deployment.yaml
+# Update configmap.yaml with the actual URL
+sed -i '' "s|YOUR_API_GATEWAY_LOADBALANCER_URL|$LB_URL|g" configmap.yaml
 ```
+
+Or manually edit `configmap.yaml` and replace `YOUR_API_GATEWAY_LOADBALANCER_URL` with your LoadBalancer URL.
 
 ### 4. Deploy Locust
 
 ```bash
-kubectl apply -f k8s/locust/namespace.yaml
-kubectl apply -f k8s/locust/deployment.yaml
-kubectl apply -f k8s/locust/service.yaml
+kubectl apply -f namespace.yaml
+kubectl apply -f configmap.yaml
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
 ```
 
 ### 4. Access Locust Web UI

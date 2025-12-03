@@ -25,7 +25,41 @@ spec:
         - name: LOCUST_MODE
           value: "master"
         - name: TARGET_HOST
-          value: "http://API_GATEWAY_LB_URL"  # Replace with actual LoadBalancer URL
+          valueFrom:
+            configMapKeyRef:
+              name: locust-config
+              key: TARGET_HOST
+        # Optional: Auto-start configuration (uncomment in ConfigMap to enable)
+        - name: LOCUST_USERS
+          valueFrom:
+            configMapKeyRef:
+              name: locust-config
+              key: LOCUST_USERS
+              optional: true
+        - name: LOCUST_SPAWN_RATE
+          valueFrom:
+            configMapKeyRef:
+              name: locust-config
+              key: LOCUST_SPAWN_RATE
+              optional: true
+        - name: LOCUST_RUN_TIME
+          valueFrom:
+            configMapKeyRef:
+              name: locust-config
+              key: LOCUST_RUN_TIME
+              optional: true
+        - name: LOCUST_HEADLESS
+          valueFrom:
+            configMapKeyRef:
+              name: locust-config
+              key: LOCUST_HEADLESS
+              optional: true
+        - name: LOCUST_AUTOSTART
+          valueFrom:
+            configMapKeyRef:
+              name: locust-config
+              key: LOCUST_AUTOSTART
+              optional: true
         ports:
         - name: web
           containerPort: 8089
@@ -68,7 +102,10 @@ spec:
         - name: LOCUST_MASTER_NODE_HOST
           value: "locust-master"
         - name: TARGET_HOST
-          value: "http://API_GATEWAY_LB_URL"  # Replace with actual LoadBalancer URL
+          valueFrom:
+            configMapKeyRef:
+              name: locust-config
+              key: TARGET_HOST
         resources:
           requests:
             cpu: 200m

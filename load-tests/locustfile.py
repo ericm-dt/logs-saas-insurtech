@@ -45,7 +45,8 @@ def on_locust_init(environment, **kwargs):
     
     # Use a requests session for initial setup
     import requests
-    base_url = environment.host or "http://localhost:3000"
+    import os
+    base_url = environment.host or os.environ.get("TARGET_HOST", "http://localhost:3000")
     
     try:
         # Fetch organizations (no authentication required - backstage endpoint)

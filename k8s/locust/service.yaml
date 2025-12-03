@@ -7,13 +7,13 @@ metadata:
     app: locust
     role: master
 spec:
-  type: ClusterIP  # Changed from LoadBalancer - access via port-forward
+  type: LoadBalancer
   selector:
     app: locust
     role: master
   ports:
   - name: web
-    port: 8089
+    port: 80
     targetPort: 8089
     protocol: TCP
   - name: master
