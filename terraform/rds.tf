@@ -8,11 +8,25 @@ resource "random_password" "db_password" {
   special = true
 }
 
+# DB subnet group for default VPC
+resource "aws_db_subnet_group" "default" {
+  count      = var.create_vpc ? 0 : 1
+  name       = "${var.project_name}-${var.environment}-db-subnet-group"
+  subnet_ids = local.database_subnet_ids
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.project_name}-${var.environment}-db-subnet-group"
+    }
+  )
+}
+
 # Security group for RDS
 resource "aws_security_group" "rds" {
   name_prefix = "${var.project_name}-${var.environment}-rds-"
   description = "Security group for RDS PostgreSQL"
-  vpc_id      = module.vpc.vpc_id
+  vpc_id      = local.vpc_id
 
   ingress {
     from_port       = 5432
@@ -48,35 +62,12 @@ resource "aws_db_parameter_group" "postgres" {
   family      = "postgres14"
   description = "Custom parameter group for DynaClaimz PostgreSQL"
 
-  # Performance tuning parameters
-  parameter {
-    name  = "max_connections"
-    value = "200"
-  }
-
-  parameter {
-    name  = "shared_buffers"
-    value = "{DBInstanceClassMemory/4096}"
-  }
-
-  parameter {
-    name  = "effective_cache_size"
-    value = "{DBInstanceClassMemory*3/4096}"
-  }
-
-  parameter {
-    name  = "maintenance_work_mem"
-    value = "2097152" # 2GB
-  }
-
+  # Only include dynamic parameters that can be changed without restart
+  # Static parameters and formula-based values are excluded to avoid apply errors
+  
   parameter {
     name  = "checkpoint_completion_target"
     value = "0.9"
-  }
-
-  parameter {
-    name  = "wal_buffers"
-    value = "16384" # 16MB
   }
 
   parameter {
@@ -139,7 +130,7 @@ resource "aws_db_instance" "postgres" {
   port     = 5432
 
   # Network
-  db_subnet_group_name   = module.vpc.database_subnet_group_name
+  db_subnet_group_name   = var.create_vpc ? module.vpc[0].database_subnet_group_name : aws_db_subnet_group.default[0].name
   vpc_security_group_ids = [aws_security_group.rds.id]
   publicly_accessible    = false
   multi_az               = var.db_multi_az
@@ -211,8 +202,9 @@ resource "aws_iam_role_policy_attachment" "rds_monitoring" {
 
 # Store database credentials in AWS Secrets Manager
 resource "aws_secretsmanager_secret" "db_credentials" {
-  name        = "${var.project_name}/${var.environment}/database/credentials"
-  description = "Database credentials for DynaClaimz ${var.environment}"
+  name_prefix             = "${var.project_name}/${var.environment}/database/credentials-"
+  description             = "Database credentials for DynaClaimz ${var.environment}"
+  recovery_window_in_days = 0  # Force delete without recovery window
 
   tags = merge(
     local.common_tags,

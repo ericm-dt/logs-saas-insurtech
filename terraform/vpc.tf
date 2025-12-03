@@ -1,7 +1,9 @@
 # VPC Configuration for EKS
 # Creates a VPC with public, private, and database subnets across multiple AZs
+# Only created if var.create_vpc is true
 
 module "vpc" {
+  count   = var.create_vpc ? 1 : 0
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 5.0"
 
@@ -67,11 +69,13 @@ module "vpc" {
 }
 
 # VPC Endpoints for AWS services (reduces NAT gateway costs)
+# Only created when using custom VPC
 resource "aws_vpc_endpoint" "s3" {
-  vpc_id            = module.vpc.vpc_id
+  count             = var.create_vpc ? 1 : 0
+  vpc_id            = module.vpc[0].vpc_id
   service_name      = "com.amazonaws.${var.aws_region}.s3"
   vpc_endpoint_type = "Gateway"
-  route_table_ids   = module.vpc.private_route_table_ids
+  route_table_ids   = module.vpc[0].private_route_table_ids
 
   tags = merge(
     local.common_tags,
@@ -82,11 +86,12 @@ resource "aws_vpc_endpoint" "s3" {
 }
 
 resource "aws_vpc_endpoint" "ecr_api" {
-  vpc_id              = module.vpc.vpc_id
+  count               = var.create_vpc ? 1 : 0
+  vpc_id              = module.vpc[0].vpc_id
   service_name        = "com.amazonaws.${var.aws_region}.ecr.api"
   vpc_endpoint_type   = "Interface"
-  subnet_ids          = module.vpc.private_subnets
-  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  subnet_ids          = module.vpc[0].private_subnets
+  security_group_ids  = [aws_security_group.vpc_endpoints[0].id]
   private_dns_enabled = true
 
   tags = merge(
@@ -98,11 +103,12 @@ resource "aws_vpc_endpoint" "ecr_api" {
 }
 
 resource "aws_vpc_endpoint" "ecr_dkr" {
-  vpc_id              = module.vpc.vpc_id
+  count               = var.create_vpc ? 1 : 0
+  vpc_id              = module.vpc[0].vpc_id
   service_name        = "com.amazonaws.${var.aws_region}.ecr.dkr"
   vpc_endpoint_type   = "Interface"
-  subnet_ids          = module.vpc.private_subnets
-  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  subnet_ids          = module.vpc[0].private_subnets
+  security_group_ids  = [aws_security_group.vpc_endpoints[0].id]
   private_dns_enabled = true
 
   tags = merge(
@@ -115,9 +121,10 @@ resource "aws_vpc_endpoint" "ecr_dkr" {
 
 # Security group for VPC endpoints
 resource "aws_security_group" "vpc_endpoints" {
+  count       = var.create_vpc ? 1 : 0
   name_prefix = "${var.project_name}-${var.environment}-vpc-endpoints-"
   description = "Security group for VPC endpoints"
-  vpc_id      = module.vpc.vpc_id
+  vpc_id      = module.vpc[0].vpc_id
 
   ingress {
     from_port   = 443

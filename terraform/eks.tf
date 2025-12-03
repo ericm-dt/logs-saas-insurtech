@@ -3,20 +3,26 @@
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.0"
+  version = "~> 21.0"
 
-  cluster_name    = local.cluster_name
-  cluster_version = var.eks_cluster_version
+  name               = local.cluster_name
+  kubernetes_version = var.eks_cluster_version
+
+  # Explicitly set standard support to comply with corporate policy
+  # This ensures no extended support charges are incurred
+  upgrade_policy = {
+    support_type = "STANDARD"
+  }
 
   # Cluster endpoint configuration
-  cluster_endpoint_public_access  = true
-  cluster_endpoint_private_access = true
+  endpoint_public_access  = true
+  endpoint_private_access = true
 
   # OIDC provider for IRSA (IAM Roles for Service Accounts)
   enable_irsa = true
 
   # Cluster addons
-  cluster_addons = {
+  addons = {
     coredns = {
       most_recent = true
     }
@@ -24,15 +30,20 @@ module "eks" {
       most_recent = true
     }
     vpc-cni = {
-      most_recent = true
+      most_recent       = true
+      before_compute    = true  # Install VPC CNI before nodes are created
     }
     aws-ebs-csi-driver = {
-      most_recent = true
+      most_recent              = true
+      service_account_role_arn = aws_iam_role.ebs_csi_driver.arn
     }
   }
 
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
+  vpc_id     = local.vpc_id
+  subnet_ids = local.subnet_ids
+
+  # Enable cluster creator admin permissions
+  enable_cluster_creator_admin_permissions = true
 
   # EKS Managed Node Groups
   eks_managed_node_groups = merge(
@@ -46,17 +57,20 @@ module "eks" {
         desired_size = var.node_desired_size
 
         disk_size = var.node_disk_size
-        disk_type = "gp3"
+        # disk_type = "gp3"  # Commented out to avoid custom launch template
 
         # Use latest EKS optimized AMI
         ami_type = "AL2_x86_64"
+        
+        # Disable custom launch template to avoid IAM restrictions
+        use_custom_launch_template = false
 
         # Enable IMDSv2
-        metadata_options = {
-          http_endpoint               = "enabled"
-          http_tokens                 = "required"
-          http_put_response_hop_limit = 1
-        }
+        # metadata_options = {
+        #   http_endpoint               = "enabled"
+        #   http_tokens                 = "required"
+        #   http_put_response_hop_limit = 1
+        # }
 
         labels = {
           Environment = var.environment
@@ -81,9 +95,12 @@ module "eks" {
         desired_size = floor(var.node_desired_size * var.spot_instance_percentage / 100)
 
         disk_size = var.node_disk_size
-        disk_type = "gp3"
+        # disk_type = "gp3"  # Commented out to avoid custom launch template
         
         capacity_type = "SPOT"
+        
+        # Disable custom launch template to avoid IAM restrictions
+        use_custom_launch_template = false
 
         labels = {
           Environment  = var.environment
@@ -110,7 +127,7 @@ module "eks" {
   )
 
   # Extend cluster security group rules
-  cluster_security_group_additional_rules = {
+  security_group_additional_rules = {
     ingress_nodes_ephemeral_ports_tcp = {
       description                = "Nodes on ephemeral ports"
       protocol                   = "tcp"
@@ -152,7 +169,7 @@ module "eks" {
   }
 
   # CloudWatch logging
-  cluster_enabled_log_types = var.enable_cloudwatch_logs ? [
+  enabled_log_types = var.enable_cloudwatch_logs ? [
     "api",
     "audit",
     "authenticator",

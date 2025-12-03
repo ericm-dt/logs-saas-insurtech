@@ -25,23 +25,41 @@ variable "create_ecr_repositories" {
 }
 
 # VPC Configuration
+variable "create_vpc" {
+  description = "Whether to create a new VPC. If false, uses default VPC"
+  type        = bool
+  default     = false
+}
+
+variable "vpc_id" {
+  description = "Existing VPC ID to use (leave empty to auto-detect default VPC)"
+  type        = string
+  default     = ""
+}
+
+variable "subnet_ids" {
+  description = "Existing subnet IDs to use (leave empty to auto-detect default VPC subnets)"
+  type        = list(string)
+  default     = []
+}
+
 variable "vpc_cidr" {
-  description = "CIDR block for VPC"
+  description = "CIDR block for VPC (only used if create_vpc is true)"
   type        = string
   default     = "10.0.0.0/16"
 }
 
 variable "availability_zones_count" {
-  description = "Number of availability zones to use"
+  description = "Number of availability zones to use (only used if create_vpc is true)"
   type        = number
   default     = 3
 }
 
 # EKS Configuration
 variable "eks_cluster_version" {
-  description = "Kubernetes version for EKS cluster"
+  description = "Kubernetes version for EKS cluster (1.32 is current standard support as of Dec 2025)"
   type        = string
-  default     = "1.28"
+  default     = "1.32"
 }
 
 variable "node_instance_types" {
@@ -96,7 +114,7 @@ variable "db_max_allocated_storage" {
 variable "db_engine_version" {
   description = "PostgreSQL engine version"
   type        = string
-  default     = "14.10"
+  default     = "14.15"
 }
 
 variable "db_username" {

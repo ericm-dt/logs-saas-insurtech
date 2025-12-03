@@ -2,18 +2,18 @@
 
 # VPC Outputs
 output "vpc_id" {
-  description = "VPC ID"
-  value       = module.vpc.vpc_id
+  description = "VPC ID (created or default)"
+  value       = local.vpc_id
 }
 
-output "private_subnets" {
-  description = "Private subnet IDs"
-  value       = module.vpc.private_subnets
+output "subnet_ids" {
+  description = "Subnet IDs used for EKS"
+  value       = local.subnet_ids
 }
 
-output "public_subnets" {
-  description = "Public subnet IDs"
-  value       = module.vpc.public_subnets
+output "vpc_created" {
+  description = "Whether a new VPC was created or default VPC is being used"
+  value       = var.create_vpc
 }
 
 # EKS Outputs
@@ -153,5 +153,23 @@ output "deployment_summary" {
     rds_instance_class  = var.db_instance_class
     rds_multi_az        = var.db_multi_az
     services_count      = length(local.services)
+    vpc_type            = var.create_vpc ? "custom" : "default"
+    nat_gateway_cost    = var.create_vpc ? "~$32/month (single NAT)" : "$0 (using default VPC)"
   }
+}
+
+# Load Balancer DNS Information
+output "load_balancer_info" {
+  description = "Information about accessing services via load balancer"
+  value = <<-EOT
+    After deploying your services with LoadBalancer type, get the DNS name:
+    
+    kubectl get svc -n default
+    
+    The LoadBalancer will be assigned a DNS name like:
+    a1234567890abcdef-1234567890.${var.aws_region}.elb.amazonaws.com
+    
+    You can use this default CNAME directly without needing a custom domain or static IP.
+    No EIP allocation required - AWS manages the load balancer IPs automatically.
+  EOT
 }
