@@ -116,6 +116,27 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
       prisma.quote.count({ where })
     ]);
 
+    logger.info('Quotes retrieved', {
+      organizationId: (req as AuthRequest).user!.organizationId,
+      userId: (req as AuthRequest).user!.userId,
+      quotesReturned: quotes.length,
+      totalMatching: total,
+      searchParams: {
+        status,
+        type,
+        userId,
+        expiresAfter,
+        expiresBefore,
+        minCoverage,
+        maxCoverage,
+        minPremium,
+        maxPremium,
+        search,
+        page: pageNum,
+        limit: limitNum
+      }
+    });
+
     res.json({
       success: true,
       data: quotes,
