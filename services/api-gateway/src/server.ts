@@ -1,12 +1,12 @@
 import express, { Application, Request, Response } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
-import morgan from 'morgan';
+import pinoHttp from 'pino-http';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { setupSwagger } from './swagger';
-import logger from './utils/logger';
+import logger, { pinoLogger } from './utils/logger';
 
 dotenv.config();
 
@@ -30,7 +30,7 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Logging
-app.use(morgan('combined'));
+app.use(pinoHttp({ logger: pinoLogger }));
 
 // Body parsing - only for non-proxied routes
 app.use((req, res, next) => {

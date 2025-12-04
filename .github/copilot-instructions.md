@@ -81,7 +81,7 @@ npm run prisma:studio      # Open Prisma Studio GUI for database browsing
 **4. Error Handling Strategy**
 - Custom `ApiError` class extends Error with `statusCode` and `isOperational` properties
 - Controllers catch errors and use `sendError(res, message, statusCode)`
-- Global `errorHandler` middleware logs all errors via Winston
+- Global `errorHandler` middleware logs all errors via Pino
 - Validation errors use `express-validator` with custom `validate()` middleware wrapper
 
 **5. Response Standardization**
@@ -235,7 +235,7 @@ Note: Currently not working due to module resolution - use relative paths for no
 1. **Helmet** - Sets security HTTP headers
 2. **CORS** - Configured via `ALLOWED_ORIGINS` env var
 3. **Rate Limiting** - 100 requests per 15 minutes per IP (configurable)
-4. **Morgan** - HTTP request logging piped to Winston
+4. **pino-http** - HTTP request/response logging with Pino
 5. **Body Parsing** - JSON and URL-encoded
 6. **Routes** - Apply authentication/authorization per route
 7. **404 Handler** - Catches undefined routes
@@ -262,10 +262,13 @@ router.post('/admin-only',
 - Path aliases configured in `jest.config.js` moduleNameMapper
 
 ### Logging
-- Winston logger instance exported from `src/utils/logger.ts`
+- Pino logger with Winston-compatible wrapper exported from `src/utils/logger.ts`
 - Log levels: error, warn, info, debug
-- Files: `logs/error.log` and `logs/combined.log`
-- Use: `logger.info('message', { metadata })` not `console.log()`
+- Production: Structured JSON logging to stdout (for container log aggregation)
+- Development: Pretty-printed colored logs via `pino-pretty`
+- HTTP logging: `pino-http` middleware logs all requests/responses
+- Usage: `logger.info('message', { metadata })` - metadata is optional
+- Never use `console.log()` - always use the logger
 
 ## Common Pitfalls
 

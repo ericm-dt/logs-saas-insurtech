@@ -1,12 +1,13 @@
 import express, { Application } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import pinoHttp from 'pino-http';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import organizationRoutes from './routes/organization.routes';
 import { setupSwagger } from './swagger';
-import logger from './utils/logger';
+import logger, { pinoLogger } from './utils/logger';
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.use(helmet({
 }));
 app.use(cors());
 app.use(express.json());
+app.use(pinoHttp({ logger: pinoLogger }));
 
 // Setup Swagger documentation
 setupSwagger(app);
