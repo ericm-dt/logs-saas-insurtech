@@ -68,9 +68,9 @@ for SERVICE in "${SERVICES[@]}"; do
         continue
     fi
     
-    # Build image
-    log_info "Building Docker image for $SERVICE..."
-    docker build -t "${SERVICE}:latest" "$SERVICE_DIR"
+    # Build image for AMD64 architecture (EKS compatibility)
+    log_info "Building Docker image for $SERVICE (linux/amd64)..."
+    docker build --platform linux/amd64 -t "${SERVICE}:latest" "$SERVICE_DIR"
     
     # Tag image
     docker tag "${SERVICE}:latest" "${ECR_REPO}:latest"
