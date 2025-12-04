@@ -31,13 +31,11 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
   const userId = (req as AuthRequest).user!.userId;
   const organizationId = (req as AuthRequest).user!.organizationId;
   
-  logger.info('Fetching policies list', { 
-    requestId, 
+  logger.info({ requestId, 
     userId, 
     organizationId,
     filters: req.query,
-    ip: req.ip 
-  });
+    ip: req.ip }, 'Fetching policies list');
   
   try {
     const { 
@@ -109,16 +107,14 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
     ]);
     const queryDuration = Date.now() - startTime;
 
-    logger.info('Policies fetched successfully', { 
-      requestId, 
+    logger.info({ requestId, 
       userId, 
       organizationId,
       count: policies.length, 
       total, 
       page: pageNum,
       queryDuration,
-      hasFilters: Object.keys(where).length > 1
-    });
+      hasFilters: Object.keys(where).length > 1 }, 'Policies fetched successfully');
 
     res.json({
       success: true,
@@ -131,13 +127,11 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
       }
     });
   } catch (error) {
-    logger.error('Failed to fetch policies', { 
-      requestId, 
+    logger.error({ requestId, 
       userId, 
       organizationId,
       error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
-    });
+      stack: error instanceof Error ? error.stack : undefined }, 'Failed to fetch policies');
     res.status(500).json({
       success: false,
       message: 'Failed to fetch policies'
@@ -210,15 +204,13 @@ router.post(
     const userId = (req as AuthRequest).user!.userId;
     const organizationId = (req as AuthRequest).user!.organizationId;
     
-    logger.info('Creating new policy', { 
-      requestId, 
+    logger.info({ requestId, 
       userId, 
       organizationId, 
       policyNumber, 
       type, 
       premium, 
-      coverageAmount 
-    });
+      coverageAmount }, 'Creating new policy');
     
     try {
       const { startDate, endDate, status } = req.body;
@@ -236,8 +228,7 @@ router.post(
         }
       });
 
-      logger.info('Policy created successfully', { 
-        requestId, 
+      logger.info({ requestId, 
         policyId: policy.id, 
         userId, 
         organizationId,
@@ -246,8 +237,7 @@ router.post(
         status: policy.status,
         premium,
         coverageAmount,
-        createdAt: policy.createdAt
-      });
+        createdAt: policy.createdAt }, 'Policy created successfully');
 
       res.status(201).json({
         success: true,
@@ -255,26 +245,22 @@ router.post(
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        logger.warn('Policy creation failed - duplicate policy number', { 
-          requestId, 
+        logger.warn({ requestId, 
           userId, 
           organizationId,
-          policyNumber 
-        });
+          policyNumber }, 'Policy creation failed - duplicate policy number');
         res.status(400).json({
           success: false,
           message: 'Policy number already exists'
         });
         return;
       }
-      logger.error('Policy creation failed', { 
-        requestId, 
+      logger.error({ requestId, 
         userId, 
         organizationId,
         policyNumber,
         error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
-      });
+        stack: error instanceof Error ? error.stack : undefined }, 'Policy creation failed');
       res.status(500).json({
         success: false,
         message: 'Failed to create policy'
@@ -295,14 +281,12 @@ router.put(
     const organizationId = (req as AuthRequest).user!.organizationId;
     const { status, premium, coverageAmount, endDate, statusChangeReason } = req.body;
     
-    logger.info('Updating policy', { 
-      requestId, 
+    logger.info({ requestId, 
       policyId, 
       userId, 
       organizationId,
       updates: { status, premium, coverageAmount, endDate: !!endDate },
-      hasReason: !!statusChangeReason
-    });
+      hasReason: !!statusChangeReason }, 'Updating policy');
     
     try {
       // Get current policy for status history
@@ -311,7 +295,7 @@ router.put(
       });
 
       if (!currentPolicy) {
-        logger.warn('Policy update failed - policy not found', { requestId, policyId, userId });
+        logger.warn({ requestId, policyId, userId }, 'Policy update failed - policy not found');
         res.status(404).json({
           success: false,
           message: 'Policy not found'
@@ -350,27 +334,23 @@ router.put(
             }
           });
           
-          logger.info('Policy status changed', { 
-            requestId, 
+          logger.info({ requestId, 
             policyId, 
             userId,
             oldStatus: currentPolicy.status, 
             newStatus: status,
-            reason: statusChangeReason
-          });
+            reason: statusChangeReason }, 'Policy status changed');
         }
 
         return updatedPolicy;
       });
 
-      logger.info('Policy updated successfully', { 
-        requestId, 
+      logger.info({ requestId, 
         policyId, 
         userId, 
         organizationId,
         statusChanged: status && status !== currentPolicy.status,
-        newStatus: status
-      });
+        newStatus: status }, 'Policy updated successfully');
 
       res.json({
         success: true,
@@ -378,20 +358,18 @@ router.put(
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        logger.warn('Policy update failed - policy not found', { requestId, policyId, userId });
+        logger.warn({ requestId, policyId, userId }, 'Policy update failed - policy not found');
         res.status(404).json({
           success: false,
           message: 'Policy not found'
         });
         return;
       }
-      logger.error('Policy update failed', { 
-        requestId, 
+      logger.error({ requestId, 
         policyId, 
         userId,
         error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
-      });
+        stack: error instanceof Error ? error.stack : undefined }, 'Policy update failed');
       res.status(500).json({
         success: false,
         message: 'Failed to update policy'

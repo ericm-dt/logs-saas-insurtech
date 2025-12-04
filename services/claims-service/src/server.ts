@@ -5,7 +5,7 @@ import pinoHttp from 'pino-http';
 import dotenv from 'dotenv';
 import claimRoutes from './routes/claim.routes';
 import { setupSwagger } from './swagger';
-import logger, { pinoLogger } from './utils/logger';
+import logger from './utils/logger';
 
 dotenv.config();
 
@@ -19,7 +19,7 @@ app.use(helmet({
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(pinoHttp({ logger: pinoLogger }));
+app.use(pinoHttp({ logger }));
 
 // Setup Swagger
 setupSwagger(app);
@@ -42,12 +42,12 @@ app.use((req, res) => {
 
 // Error handler
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  logger.error('Unhandled error', { 
+  logger.error({ 
     error: err.message, 
     stack: err.stack,
     path: req.path,
     method: req.method
-  });
+  }, 'Unhandled error');
   res.status(500).json({
     success: false,
     message: 'Internal server error'
@@ -55,9 +55,9 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 });
 
 app.listen(PORT, () => {
-  logger.info('Claims Service started', {
+  logger.info({
     port: PORT,
     environment: process.env.NODE_ENV || 'development',
     swaggerUI: `/api-docs`
-  });
+  }, 'Claims Service started');
 });

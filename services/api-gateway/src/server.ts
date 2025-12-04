@@ -6,7 +6,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { setupSwagger } from './swagger';
-import logger, { pinoLogger } from './utils/logger';
+import logger from './utils/logger';
 
 dotenv.config();
 
@@ -30,7 +30,7 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Logging
-app.use(pinoHttp({ logger: pinoLogger }));
+app.use(pinoHttp({ logger }));
 
 // Body parsing - only for non-proxied routes
 app.use((req, res, next) => {
@@ -66,13 +66,13 @@ const proxyOptions = {
     }
   },
   onError: (err: any, req: any, res: any) => {
-    logger.error('Proxy error', { 
+    logger.error({ 
       error: err.message, 
       code: err.code, 
       path: req.path,
       method: req.method,
       target: req.headers.host
-    });
+    }, 'Proxy error');
     res.status(err.code === 'ECONNREFUSED' ? 503 : 504).json({
       success: false,
       message: err.code === 'ECONNREFUSED' 
@@ -120,7 +120,7 @@ app.get('/health', (req: Request, res: Response) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  logger.info('API Gateway started', {
+  logger.info({
     port: PORT,
     environment: process.env.NODE_ENV || 'development',
     swaggerUI: `/api-docs`,
@@ -130,5 +130,5 @@ app.listen(PORT, () => {
       claims: CLAIMS_SERVICE_URL,
       quotes: QUOTES_SERVICE_URL
     }
-  });
+  }, 'API Gateway started');
 });

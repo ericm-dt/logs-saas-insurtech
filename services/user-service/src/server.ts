@@ -7,7 +7,7 @@ import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import organizationRoutes from './routes/organization.routes';
 import { setupSwagger } from './swagger';
-import logger, { pinoLogger } from './utils/logger';
+import logger from './utils/logger';
 
 dotenv.config();
 
@@ -19,7 +19,7 @@ app.use(helmet({
 }));
 app.use(cors());
 app.use(express.json());
-app.use(pinoHttp({ logger: pinoLogger }));
+app.use(pinoHttp({ logger }));
 
 // Setup Swagger documentation
 setupSwagger(app);
@@ -37,9 +37,9 @@ app.get('/health', (req, res) => {
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
-  logger.info('User Service started', {
+  logger.info({
     port: PORT,
     environment: process.env.NODE_ENV || 'development',
     swaggerUI: `/api-docs`
-  });
+  }, 'User Service started');
 });

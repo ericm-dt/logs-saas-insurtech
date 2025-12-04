@@ -262,12 +262,12 @@ router.post('/admin-only',
 - Path aliases configured in `jest.config.js` moduleNameMapper
 
 ### Logging
-- Pino logger with Winston-compatible wrapper exported from `src/utils/logger.ts`
+- Pino logger exported from `src/utils/logger.ts`
 - Log levels: error, warn, info, debug
 - Production: Structured JSON logging to stdout (for container log aggregation)
 - Development: Pretty-printed colored logs via `pino-pretty`
 - HTTP logging: `pino-http` middleware logs all requests/responses
-- Usage: `logger.info('message', { metadata })` - metadata is optional
+- Usage: `logger.info({ metadata }, 'message')` - Pino API with metadata object first, message second
 - Never use `console.log()` - always use the logger
 
 ## Common Pitfalls
