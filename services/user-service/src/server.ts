@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import organizationRoutes from './routes/organization.routes';
 import { setupSwagger } from './swagger';
+import logger from './utils/logger';
 
 dotenv.config();
 
@@ -34,5 +35,9 @@ app.get('/health', (req, res) => {
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
-  console.log(`User Service running on port ${PORT}`);
+  logger.info('User Service started', {
+    port: PORT,
+    environment: process.env.NODE_ENV || 'development',
+    swaggerUI: `/api-docs`
+  });
 });

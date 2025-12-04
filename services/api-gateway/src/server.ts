@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { setupSwagger } from './swagger';
+import logger from './utils/logger';
 
 dotenv.config();
 
@@ -65,7 +66,13 @@ const proxyOptions = {
     }
   },
   onError: (err: any, req: any, res: any) => {
-    console.error('Proxy error:', err.message);
+    logger.error('Proxy error', { 
+      error: err.message, 
+      code: err.code, 
+      path: req.path,
+      method: req.method,
+      target: req.headers.host
+    });
     res.status(err.code === 'ECONNREFUSED' ? 503 : 504).json({
       success: false,
       message: err.code === 'ECONNREFUSED' 
@@ -113,11 +120,15 @@ app.get('/health', (req: Request, res: Response) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log(`API Gateway running on port ${PORT}`);
-  console.log(`Swagger UI available at http://localhost:${PORT}/api-docs`);
-  console.log(`Routing to services:`);
-  console.log(`  - User: ${USER_SERVICE_URL}`);
-  console.log(`  - Policies: ${POLICY_SERVICE_URL}`);
-  console.log(`  - Claims: ${CLAIMS_SERVICE_URL}`);
-  console.log(`  - Quotes: ${QUOTES_SERVICE_URL}`);
+  logger.info('API Gateway started', {
+    port: PORT,
+    environment: process.env.NODE_ENV || 'development',
+    swaggerUI: `/api-docs`,
+    services: {
+      user: USER_SERVICE_URL,
+      policies: POLICY_SERVICE_URL,
+      claims: CLAIMS_SERVICE_URL,
+      quotes: QUOTES_SERVICE_URL
+    }
+  });
 });

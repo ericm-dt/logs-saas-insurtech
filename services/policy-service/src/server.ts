@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import policyRoutes from './routes/policy.routes';
 import { setupSwagger } from './swagger';
+import logger from './utils/logger';
 
 dotenv.config();
 
@@ -41,7 +42,12 @@ app.use((req, res) => {
 
 // Error handler
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
+  logger.error('Unhandled error', { 
+    error: err.message, 
+    stack: err.stack,
+    path: req.path,
+    method: req.method
+  });
   res.status(500).json({
     success: false,
     message: 'Internal server error'
@@ -49,5 +55,9 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 });
 
 app.listen(PORT, () => {
-  console.log(`Policy service running on port ${PORT}`);
+  logger.info('Policy Service started', {
+    port: PORT,
+    environment: process.env.NODE_ENV || 'development',
+    swaggerUI: `/api-docs`
+  });
 });

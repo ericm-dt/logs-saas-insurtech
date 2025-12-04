@@ -3,6 +3,7 @@ import { body, param, ValidationChain } from 'express-validator';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import axios from 'axios';
+import logger from '../utils/logger';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -26,11 +27,23 @@ const validate = (validations: ValidationChain[]) => {
 };
 
 router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+  
+  logger.info('Fetching policies list', { 
+    requestId, 
+    userId, 
+    organizationId,
+    filters: req.query,
+    ip: req.ip 
+  });
+  
   try {
     const { 
       status, 
       type, 
-      userId, 
+      userId: queryUserId, 
       startDateFrom, 
       startDateTo,
       endDateFrom,
@@ -49,7 +62,7 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
 
     if (status) where.status = status;
     if (type) where.type = type;
-    if (userId) where.userId = userId;
+    if (queryUserId) where.userId = queryUserId;
     
     // Date range filters
     if (startDateFrom || startDateTo) {
@@ -84,6 +97,7 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
+    const startTime = Date.now();
     const [policies, total] = await Promise.all([
       prisma.policy.findMany({
         where,
@@ -93,6 +107,18 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
       }),
       prisma.policy.count({ where })
     ]);
+    const queryDuration = Date.now() - startTime;
+
+    logger.info('Policies fetched successfully', { 
+      requestId, 
+      userId, 
+      organizationId,
+      count: policies.length, 
+      total, 
+      page: pageNum,
+      queryDuration,
+      hasFilters: Object.keys(where).length > 1
+    });
 
     res.json({
       success: true,
@@ -105,6 +131,13 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
       }
     });
   } catch (error) {
+    logger.error('Failed to fetch policies', { 
+      requestId, 
+      userId, 
+      organizationId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch policies'
@@ -172,15 +205,27 @@ router.post(
     body('coverageAmount').isNumeric().withMessage('Coverage amount must be numeric')
   ]),
   async (req: AuthRequest, res): Promise<void> => {
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const { policyNumber, type, premium, coverageAmount } = req.body;
+    const userId = (req as AuthRequest).user!.userId;
+    const organizationId = (req as AuthRequest).user!.organizationId;
+    
+    logger.info('Creating new policy', { 
+      requestId, 
+      userId, 
+      organizationId, 
+      policyNumber, 
+      type, 
+      premium, 
+      coverageAmount 
+    });
+    
     try {
-      const { policyNumber, type, startDate, endDate, premium, coverageAmount, status } = req.body;
-      
-      // Use userId from authenticated token
-      const userId = (req as AuthRequest).user!.userId;
+      const { startDate, endDate, status } = req.body;
 
       const policy = await prisma.policy.create({        data: {
           userId,
-          organizationId: (req as AuthRequest).user!.organizationId,
+          organizationId,
           policyNumber,
           type,
           status: status || 'PENDING',
@@ -191,18 +236,45 @@ router.post(
         }
       });
 
+      logger.info('Policy created successfully', { 
+        requestId, 
+        policyId: policy.id, 
+        userId, 
+        organizationId,
+        policyNumber, 
+        type, 
+        status: policy.status,
+        premium,
+        coverageAmount,
+        createdAt: policy.createdAt
+      });
+
       res.status(201).json({
         success: true,
         data: policy
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        logger.warn('Policy creation failed - duplicate policy number', { 
+          requestId, 
+          userId, 
+          organizationId,
+          policyNumber 
+        });
         res.status(400).json({
           success: false,
           message: 'Policy number already exists'
         });
         return;
       }
+      logger.error('Policy creation failed', { 
+        requestId, 
+        userId, 
+        organizationId,
+        policyNumber,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       res.status(500).json({
         success: false,
         message: 'Failed to create policy'
@@ -217,15 +289,29 @@ router.put(
   authenticate,
   param('id').isUUID(),
   async (req: AuthRequest, res): Promise<void> => {
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const policyId = req.params.id;
+    const userId = (req as AuthRequest).user!.userId;
+    const organizationId = (req as AuthRequest).user!.organizationId;
+    const { status, premium, coverageAmount, endDate, statusChangeReason } = req.body;
+    
+    logger.info('Updating policy', { 
+      requestId, 
+      policyId, 
+      userId, 
+      organizationId,
+      updates: { status, premium, coverageAmount, endDate: !!endDate },
+      hasReason: !!statusChangeReason
+    });
+    
     try {
-      const { status, premium, coverageAmount, endDate, statusChangeReason } = req.body;
-
       // Get current policy for status history
       const currentPolicy = await prisma.policy.findUnique({
         where: { id: req.params.id }
       });
 
       if (!currentPolicy) {
+        logger.warn('Policy update failed - policy not found', { requestId, policyId, userId });
         res.status(404).json({
           success: false,
           message: 'Policy not found'
@@ -263,9 +349,27 @@ router.put(
               }
             }
           });
+          
+          logger.info('Policy status changed', { 
+            requestId, 
+            policyId, 
+            userId,
+            oldStatus: currentPolicy.status, 
+            newStatus: status,
+            reason: statusChangeReason
+          });
         }
 
         return updatedPolicy;
+      });
+
+      logger.info('Policy updated successfully', { 
+        requestId, 
+        policyId, 
+        userId, 
+        organizationId,
+        statusChanged: status && status !== currentPolicy.status,
+        newStatus: status
       });
 
       res.json({
@@ -274,12 +378,20 @@ router.put(
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        logger.warn('Policy update failed - policy not found', { requestId, policyId, userId });
         res.status(404).json({
           success: false,
           message: 'Policy not found'
         });
         return;
       }
+      logger.error('Policy update failed', { 
+        requestId, 
+        policyId, 
+        userId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       res.status(500).json({
         success: false,
         message: 'Failed to update policy'

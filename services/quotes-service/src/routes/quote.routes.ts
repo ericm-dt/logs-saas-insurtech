@@ -3,6 +3,7 @@ import { body, param, ValidationChain } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import axios from 'axios';
+import logger from '../utils/logger';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -37,7 +38,11 @@ function calculatePremium(coverageAmount: number, type: string): number {
   };
   
   const multiplier = typeMultipliers[type] || 1.0;
-  return parseFloat((coverageAmount * baseRate * multiplier).toFixed(2));
+  const premium = parseFloat((coverageAmount * baseRate * multiplier).toFixed(2));
+  
+  logger.debug('Premium calculated', { coverageAmount, type, baseRate, multiplier, calculatedPremium: premium });
+  
+  return premium;
 }
 
 // Get all quotes
@@ -187,30 +192,53 @@ router.post(
     body('expiresAt').optional().isISO8601().withMessage('Valid expiration date required')
   ]),
   async (req: AuthRequest, res): Promise<void> => {
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const { quoteNumber, type, coverageAmount, expiresAt } = req.body;
+    const userId = (req as AuthRequest).user!.userId;
+    const organizationId = (req as AuthRequest).user!.organizationId;
+    
+    logger.info('Creating new quote', { 
+      requestId, 
+      userId, 
+      organizationId, 
+      quoteNumber, 
+      type, 
+      coverageAmount 
+    });
+    
     try {
-      const { quoteNumber, type, coverageAmount, expiresAt } = req.body;
-      
-      // Use userId from authenticated token
-      const userId = (req as AuthRequest).user!.userId;
-
       // Calculate premium
       const premium = calculatePremium(parseFloat(coverageAmount), type);
 
       // Default expiration: 30 days from now
       const defaultExpiration = new Date();
       defaultExpiration.setDate(defaultExpiration.getDate() + 30);
+      const expirationDate = expiresAt ? new Date(expiresAt) : defaultExpiration;
 
       const quote = await prisma.quote.create({
         data: {
           userId,
-          organizationId: (req as AuthRequest).user!.organizationId,
+          organizationId,
           quoteNumber,
           type,
           coverageAmount,
           premium,
-          expiresAt: expiresAt ? new Date(expiresAt) : defaultExpiration,
+          expiresAt: expirationDate,
           status: 'ACTIVE'
         }
+      });
+
+      logger.info('Quote created successfully', { 
+        requestId, 
+        quoteId: quote.id, 
+        userId, 
+        organizationId,
+        quoteNumber, 
+        type, 
+        coverageAmount,
+        calculatedPremium: premium,
+        expiresAt: expirationDate,
+        createdAt: quote.createdAt
       });
 
       res.status(201).json({
@@ -220,12 +248,26 @@ router.post(
       });
     } catch (error) {
       if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002') {
+        logger.warn('Quote creation failed - duplicate quote number', { 
+          requestId, 
+          userId, 
+          organizationId,
+          quoteNumber 
+        });
         res.status(400).json({
           success: false,
           message: 'Quote number already exists'
         });
         return;
       }
+      logger.error('Quote creation failed', { 
+        requestId, 
+        userId, 
+        organizationId,
+        quoteNumber,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       res.status(500).json({
         success: false,
         message: 'Failed to create quote'
@@ -334,12 +376,19 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
   }
 });// Convert quote to policy (workflow endpoint)
 router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const quoteId = req.params.id;
+  const userId = (req as AuthRequest).user!.userId;
+  
+  logger.info('Converting quote to policy', { requestId, quoteId, userId });
+  
   try {
     const quote = await prisma.quote.findUnique({
       where: { id: req.params.id }
     });
 
     if (!quote) {
+      logger.warn('Quote conversion failed - quote not found', { requestId, quoteId, userId });
       res.status(404).json({
         success: false,
         message: 'Quote not found'
@@ -348,6 +397,12 @@ router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: Auth
     }
 
     if (quote.status !== 'ACTIVE') {
+      logger.warn('Quote conversion rejected - quote not active', { 
+        requestId, 
+        quoteId, 
+        userId, 
+        quoteStatus: quote.status 
+      });
       res.status(400).json({
         success: false,
         message: 'Only ACTIVE quotes can be converted to policies'
@@ -356,6 +411,13 @@ router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: Auth
     }
 
     if (new Date() > quote.expiresAt) {
+      logger.warn('Quote conversion rejected - quote expired', { 
+        requestId, 
+        quoteId, 
+        userId, 
+        expiresAt: quote.expiresAt, 
+        now: new Date() 
+      });
       res.status(400).json({
         success: false,
         message: 'Quote has expired'
@@ -366,12 +428,21 @@ router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: Auth
     // Call policy service to create policy
     const POLICY_SERVICE_URL = process.env.POLICY_SERVICE_URL || 'http://policy-service:3003';
     const token = req.headers.authorization?.substring(7) || '';
+    const policyNumber = `POL-${Date.now()}`;
+
+    logger.info('Calling policy service to create policy from quote', { 
+      requestId, 
+      quoteId, 
+      policyNumber, 
+      serviceUrl: POLICY_SERVICE_URL 
+    });
 
     try {
+      const startTime = Date.now();
       const policyResponse = await axios.post(
         `${POLICY_SERVICE_URL}/api/policies`,
         {
-          policyNumber: `POL-${Date.now()}`,
+          policyNumber,
           type: quote.type,
           startDate: new Date().toISOString(),
           endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
@@ -381,11 +452,24 @@ router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: Auth
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      const policyServiceDuration = Date.now() - startTime;
 
       // Update quote status to CONVERTED
       const updatedQuote = await prisma.quote.update({
         where: { id: req.params.id },
         data: { status: 'CONVERTED' }
+      });
+
+      logger.info('Quote converted to policy successfully', { 
+        requestId, 
+        quoteId: updatedQuote.id, 
+        policyId: policyResponse.data.data.id,
+        userId,
+        organizationId: quote.organizationId,
+        policyNumber,
+        premium: quote.premium,
+        coverageAmount: quote.coverageAmount,
+        policyServiceDuration
       });
 
       res.status(201).json({
@@ -397,12 +481,27 @@ router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: Auth
         message: 'Quote successfully converted to policy'
       });
     } catch (policyError) {
+      logger.error('Policy service call failed during quote conversion', { 
+        requestId, 
+        quoteId, 
+        policyNumber,
+        serviceUrl: POLICY_SERVICE_URL,
+        error: policyError instanceof Error ? policyError.message : 'Unknown error',
+        stack: policyError instanceof Error ? policyError.stack : undefined
+      });
       res.status(500).json({
         success: false,
         message: 'Failed to create policy from quote'
       });
     }
   } catch (error) {
+    logger.error('Quote conversion failed', { 
+      requestId, 
+      quoteId, 
+      userId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to convert quote'

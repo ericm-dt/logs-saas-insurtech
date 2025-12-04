@@ -3,6 +3,7 @@ import { body, param, ValidationChain } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import axios from 'axios';
+import logger from '../utils/logger';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -29,20 +30,42 @@ const validate = (validations: ValidationChain[]) => {
 
 // Validate policy exists and is active
 async function validatePolicy(policyId: string, token: string): Promise<{ valid: boolean; policy?: any }> {
+  const requestId = `policy_val_${Date.now()}`;
+  
+  logger.debug('Validating policy with policy-service', { requestId, policyId, serviceUrl: POLICY_SERVICE_URL });
+  
   try {
+    const startTime = Date.now();
     const response = await axios.get(
       `${POLICY_SERVICE_URL}/api/policies/${policyId}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
+    const duration = Date.now() - startTime;
     
     if (response.data.success) {
       const policy = response.data.data;
-      if (policy.status === 'ACTIVE') {
+      const isActive = policy.status === 'ACTIVE';
+      
+      logger.debug('Policy validation complete', { 
+        requestId, 
+        policyId, 
+        isActive, 
+        policyStatus: policy.status,
+        duration
+      });
+      
+      if (isActive) {
         return { valid: true, policy };
       }
     }
     return { valid: false };
   } catch (error) {
+    logger.error('Policy validation failed', { 
+      requestId, 
+      policyId, 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      serviceUrl: POLICY_SERVICE_URL
+    });
     return { valid: false };
   }
 }
@@ -186,17 +209,36 @@ router.post(
     body('claimAmount').isNumeric().withMessage('Claim amount must be numeric')
   ]),
   async (req: AuthRequest, res): Promise<void> => {
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const { policyId, claimNumber, claimAmount, description } = req.body;
+    const userId = (req as AuthRequest).user!.userId;
+    const organizationId = (req as AuthRequest).user!.organizationId;
+    
+    logger.info('Creating new claim', { 
+      requestId, 
+      userId, 
+      organizationId, 
+      policyId, 
+      claimNumber, 
+      claimAmount 
+    });
+    
     try {
-      const { policyId, claimNumber, incidentDate, description, claimAmount } = req.body;
-      
-      // Use userId from authenticated token
-      const userId = (req as AuthRequest).user!.userId;
+      const { incidentDate } = req.body;
 
       const token = req.headers.authorization?.substring(7) || '';
 
       // Validate policy exists and is active
+      logger.debug('Validating policy for claim creation', { requestId, policyId });
       const policyValidation = await validatePolicy(policyId, token);
+      
       if (!policyValidation.valid) {
+        logger.warn('Claim creation rejected - invalid or inactive policy', { 
+          requestId, 
+          userId, 
+          policyId, 
+          claimNumber 
+        });
         res.status(400).json({
           success: false,
           message: 'Policy not found or not active'
@@ -205,7 +247,15 @@ router.post(
       }
 
       // Verify policy belongs to same organization (multi-tenant security)
-      if (policyValidation.policy.organizationId !== (req as AuthRequest).user!.organizationId) {
+      if (policyValidation.policy.organizationId !== organizationId) {
+        logger.error('Security violation - cross-organization claim attempt', { 
+          requestId, 
+          userId, 
+          userOrgId: organizationId,
+          policyOrgId: policyValidation.policy.organizationId, 
+          policyId,
+          claimNumber
+        });
         res.status(403).json({
           success: false,
           message: 'Policy belongs to a different organization'
@@ -216,7 +266,7 @@ router.post(
       const claim = await prisma.claim.create({
         data: {
           userId,
-          organizationId: (req as AuthRequest).user!.organizationId,
+          organizationId,
           policyId,
           claimNumber,
           incidentDate: new Date(incidentDate),
@@ -226,18 +276,45 @@ router.post(
         }
       });
 
+      logger.info('Claim created successfully', { 
+        requestId, 
+        claimId: claim.id, 
+        userId, 
+        organizationId,
+        policyId, 
+        claimNumber, 
+        claimAmount,
+        status: claim.status,
+        createdAt: claim.createdAt
+      });
+
       res.status(201).json({
         success: true,
         data: claim
       });
     } catch (error) {
       if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002') {
+        logger.warn('Claim creation failed - duplicate claim number', { 
+          requestId, 
+          userId, 
+          organizationId,
+          claimNumber 
+        });
         res.status(400).json({
           success: false,
           message: 'Claim number already exists'
         });
         return;
       }
+      logger.error('Claim creation failed', { 
+        requestId, 
+        userId, 
+        organizationId,
+        policyId,
+        claimNumber,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       res.status(500).json({
         success: false,
         message: 'Failed to create claim'
@@ -258,15 +335,28 @@ router.put(
     body('denialReason').optional().isString().withMessage('Denial reason must be string')
   ]),
   async (req: AuthRequest, res): Promise<void> => {
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const claimId = req.params.id;
+    const { status, approvedAmount, denialReason } = req.body;
+    const userId = (req as AuthRequest).user!.userId;
+    
+    logger.info('Updating claim status', { 
+      requestId, 
+      claimId, 
+      userId, 
+      newStatus: status, 
+      approvedAmount, 
+      hasDenialReason: !!denialReason 
+    });
+    
     try {
-      const { status, approvedAmount, denialReason } = req.body;
-
       // Business logic: validate status transitions
       const currentClaim = await prisma.claim.findUnique({
         where: { id: req.params.id }
       });
 
       if (!currentClaim) {
+        logger.warn('Claim status update failed - claim not found', { requestId, claimId, userId });
         res.status(404).json({
           success: false,
           message: 'Claim not found'
@@ -284,6 +374,14 @@ router.put(
       };
 
       if (!validTransitions[currentClaim.status].includes(status)) {
+        logger.warn('Invalid claim status transition attempted', { 
+          requestId, 
+          claimId, 
+          userId,
+          currentStatus: currentClaim.status, 
+          requestedStatus: status,
+          validTransitions: validTransitions[currentClaim.status]
+        });
         res.status(400).json({
           success: false,
           message: `Invalid status transition from ${currentClaim.status} to ${status}`
@@ -293,6 +391,7 @@ router.put(
 
       // Require approval amount for APPROVED status
       if (status === 'APPROVED' && !approvedAmount) {
+        logger.warn('Claim approval rejected - missing approved amount', { requestId, claimId, userId });
         res.status(400).json({
           success: false,
           message: 'Approved amount required for APPROVED status'
@@ -302,6 +401,7 @@ router.put(
 
       // Require denial reason for DENIED status
       if (status === 'DENIED' && !denialReason) {
+        logger.warn('Claim denial rejected - missing denial reason', { requestId, claimId, userId });
         res.status(400).json({
           success: false,
           message: 'Denial reason required for DENIED status'
@@ -340,18 +440,37 @@ router.put(
         return updatedClaim;
       });
 
+      logger.info('Claim status updated successfully', { 
+        requestId, 
+        claimId, 
+        userId,
+        organizationId: currentClaim.organizationId,
+        oldStatus: currentClaim.status, 
+        newStatus: status,
+        approvedAmount,
+        claimAmount: currentClaim.claimAmount
+      });
+
       res.json({
         success: true,
         data: result
       });
     } catch (error) {
       if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2025') {
+        logger.warn('Claim status update failed - claim not found', { requestId, claimId, userId });
         res.status(404).json({
           success: false,
           message: 'Claim not found'
         });
         return;
       }
+      logger.error('Claim status update failed', { 
+        requestId, 
+        claimId, 
+        userId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       res.status(500).json({
         success: false,
         message: 'Failed to update claim status'
