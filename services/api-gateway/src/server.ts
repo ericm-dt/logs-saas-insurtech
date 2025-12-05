@@ -30,7 +30,47 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Logging
-app.use(pinoHttp({ logger }));
+app.use(pinoHttp({ 
+  logger,
+  customLogLevel: (req, res, err) => {
+    if (res.statusCode >= 400 && res.statusCode < 500) return 'warn';
+    if (res.statusCode >= 500 || err) return 'error';
+    return 'info';
+  },
+  customSuccessMessage: (req, res) => {
+    const contentLength = res.getHeader('content-length') || 0;
+    return `${req.method} ${req.url} ${res.statusCode} - ${contentLength} bytes`;
+  },
+  customErrorMessage: (req, res, err) => {
+    return `${req.method} ${req.url} ${res.statusCode} - Error: ${err.message}`;
+  },
+  customAttributeKeys: {
+    req: 'request',
+    res: 'response',
+    err: 'error',
+    responseTime: 'duration'
+  },
+  serializers: {
+    req: (req) => ({
+      method: req.method,
+      url: req.url,
+      remoteAddress: req.socket?.remoteAddress
+    }),
+    res: (res) => ({
+      statusCode: res.statusCode
+    })
+  },
+  redact: {
+    paths: [
+      'req.headers.authorization',
+      'req.headers.cookie',
+      'req.headers["x-api-key"]',
+      'req.headers["x-auth-token"]',
+      'res.headers["set-cookie"]'
+    ],
+    censor: '[REDACTED]'
+  }
+}));
 
 // Body parsing - only for non-proxied routes
 app.use((req, res, next) => {
