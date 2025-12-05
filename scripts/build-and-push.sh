@@ -1,12 +1,23 @@
 #!/bin/bash
 # Build and Push Docker Images to ECR
-# Usage: ./build-and-push.sh <aws-region> <aws-account-id>
+# Usage: ./build-and-push.sh [service-name] [aws-region] [aws-account-id]
+#   service-name: Optional. Specific service to build (e.g., user-service). If omitted, builds all services.
+#   aws-region: AWS region (default: us-west-2)
+#   aws-account-id: AWS account ID (auto-detected if not provided)
 
 set -e
 
-# Configuration
-AWS_REGION="${1:-us-west-2}"
-AWS_ACCOUNT_ID="${2}"
+# Parse arguments
+if [[ "$1" =~ ^(api-gateway|user-service|policy-service|claims-service|quotes-service)$ ]]; then
+    SPECIFIC_SERVICE="$1"
+    AWS_REGION="${2:-us-west-2}"
+    AWS_ACCOUNT_ID="${3}"
+else
+    SPECIFIC_SERVICE=""
+    AWS_REGION="${1:-us-west-2}"
+    AWS_ACCOUNT_ID="${2}"
+fi
+
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Colors for output
@@ -48,13 +59,19 @@ aws ecr get-login-password --region "$AWS_REGION" | \
     "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
 # Services to build
-SERVICES=(
-    "api-gateway"
-    "user-service"
-    "policy-service"
-    "claims-service"
-    "quotes-service"
-)
+if [ -n "$SPECIFIC_SERVICE" ]; then
+    log_info "Building specific service: $SPECIFIC_SERVICE"
+    SERVICES=("$SPECIFIC_SERVICE")
+else
+    log_info "Building all services"
+    SERVICES=(
+        "api-gateway"
+        "user-service"
+        "policy-service"
+        "claims-service"
+        "quotes-service"
+    )
+fi
 
 # Build and push each service
 for SERVICE in "${SERVICES[@]}"; do

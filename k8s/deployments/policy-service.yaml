@@ -20,6 +20,7 @@ spec:
       containers:
       - name: policy-service
         image: 446130280781.dkr.ecr.us-east-1.amazonaws.com/dynaclaimz/policy-service
+        imagePullPolicy: Always
         ports:
         - containerPort: 3003
           protocol: TCP

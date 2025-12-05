@@ -20,6 +20,7 @@ spec:
       containers:
       - name: user-service
         image: 446130280781.dkr.ecr.us-east-1.amazonaws.com/dynaclaimz/user-service
+        imagePullPolicy: Always
         ports:
         - containerPort: 3001
           protocol: TCP

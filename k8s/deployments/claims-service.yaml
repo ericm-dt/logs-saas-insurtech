@@ -20,6 +20,7 @@ spec:
       containers:
       - name: claims-service
         image: 446130280781.dkr.ecr.us-east-1.amazonaws.com/dynaclaimz/claims-service
+        imagePullPolicy: Always
         ports:
         - containerPort: 3004
           protocol: TCP
