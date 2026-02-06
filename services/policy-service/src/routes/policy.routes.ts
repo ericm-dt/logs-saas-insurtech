@@ -470,7 +470,14 @@ router.put(
       });
 
       if (!currentPolicy) {
-        logger.warn({ \n          requestId, \n          policyId, \n          userId, \n          organizationId,\n          operation: 'update_policy_not_found',\n          attemptedUpdates: { status, premium, coverageAmount }\n        }, 'Policy update failed - policy not found in organization');
+        logger.warn({ 
+          requestId, 
+          policyId, 
+          userId, 
+          organizationId,
+          operation: 'update_policy_not_found',
+          attemptedUpdates: { status, premium, coverageAmount }
+        }, 'Policy update failed - policy not found in organization');
         res.status(404).json({
           success: false,
           message: 'Policy not found'
@@ -559,7 +566,14 @@ router.put(
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        logger.warn({ \n          requestId, \n          policyId, \n          userId,\n          organizationId,\n          operation: 'update_policy_not_found_transaction',\n          errorCode: error.code\n        }, 'Policy update failed - policy not found during transaction');
+        logger.warn({ 
+          requestId, 
+          policyId, 
+          userId,
+          organizationId,
+          operation: 'update_policy_not_found_transaction',
+          errorCode: error.code
+        }, 'Policy update failed - policy not found during transaction');
         res.status(404).json({
           success: false,
           message: 'Policy not found'
@@ -695,19 +709,6 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
         data: claimResponse.data.data,
         message: 'Claim filed successfully'
       });
-    } catch (claimError) {
-      logger.error({ 
-        requestId, 
-        policyId, 
-        claimNumber,
-        serviceUrl: CLAIMS_SERVICE_URL,
-        operation: 'file_claim_service_error',
-        error: {
-          message: claimError instanceof Error ? claimError.message : 'Unknown error',
-          isAxiosError: (claimError as any).isAxiosError,
-          responseStatus: (claimError as any).response?.status
-        }
-      }, 'Claims service call failed');
     } catch (claimError) {
       logger.error({ 
         requestId, 
