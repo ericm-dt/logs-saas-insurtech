@@ -32,7 +32,13 @@ const validate = (validations: ValidationChain[]) => {
 async function validatePolicy(policyId: string, token: string): Promise<{ valid: boolean; policy?: any }> {
   const requestId = `policy_val_${Date.now()}`;
   
-  logger.debug({ requestId, policyId, serviceUrl: POLICY_SERVICE_URL }, 'Validating policy with policy-service');
+  logger.debug({ 
+    requestId, 
+    policyId, 
+    operation: 'validate_policy',
+    serviceUrl: POLICY_SERVICE_URL,
+    hasAuth: !!token
+  }, 'Starting policy validation with policy-service');
   
   try {
     const startTime = Date.now();
@@ -46,11 +52,22 @@ async function validatePolicy(policyId: string, token: string): Promise<{ valid:
       const policy = response.data.data;
       const isActive = policy.status === 'ACTIVE';
       
-      logger.debug({ requestId, 
+      logger.debug({ 
+        requestId, 
         policyId, 
-        isActive, 
-        policyStatus: policy.status,
-        duration }, 'Policy validation complete');
+        operation: 'validate_policy_success',
+        validation: {
+          isActive, 
+          policyStatus: policy.status,
+          policyType: policy.type,
+          policyNumber: policy.policyNumber,
+          policyOrganizationId: policy.organizationId
+        },
+        performance: {
+          duration,
+          responseTime: `${duration}ms`
+        }
+      }, 'Policy validation complete from policy-service');
       
       if (isActive) {
         return { valid: true, policy };
@@ -58,10 +75,19 @@ async function validatePolicy(policyId: string, token: string): Promise<{ valid:
     }
     return { valid: false };
   } catch (error) {
-    logger.error({ requestId, 
+    logger.error({ 
+      requestId, 
       policyId, 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      serviceUrl: POLICY_SERVICE_URL }, 'Policy validation failed');
+      operation: 'validate_policy_error',
+      service: 'policy-service',
+      serviceUrl: POLICY_SERVICE_URL,
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        name: error instanceof Error ? error.name : 'Error',
+        code: (error as any).code,
+        isAxiosError: (error as any).isAxiosError
+      }
+    }, 'Policy validation failed - policy service unavailable or error');
     return { valid: false };
   }
 }
@@ -210,12 +236,23 @@ router.post(
     const userId = (req as AuthRequest).user!.userId;
     const organizationId = (req as AuthRequest).user!.organizationId;
     
-    logger.info({ requestId, 
+    logger.info({ 
+      requestId, 
       userId, 
       organizationId, 
       policyId, 
       claimNumber, 
-      claimAmount }, 'Creating new claim');
+      claimAmount,
+      operation: 'create_claim',
+      claimData: {
+        claimNumber,
+        claimAmount,
+        description: req.body.description?.substring(0, 100), // First 100 chars
+        incidentDate: req.body.incidentDate
+      },
+      ip: req.ip,
+      userAgent: req.get('user-agent')
+    }, 'Creating new claim for policy');
     
     try {
       const { incidentDate } = req.body;
@@ -223,14 +260,24 @@ router.post(
       const token = req.headers.authorization?.substring(7) || '';
 
       // Validate policy exists and is active
-      logger.debug({ requestId, policyId }, 'Validating policy for claim creation');
+      logger.debug({ 
+        requestId, 
+        policyId,
+        operation: 'validate_policy_for_claim', 
+        claimNumber
+      }, 'Validating policy status before claim creation');
       const policyValidation = await validatePolicy(policyId, token);
       
       if (!policyValidation.valid) {
-        logger.warn({ requestId, 
+        logger.warn({ 
+          requestId, 
           userId, 
+          organizationId,
           policyId, 
-          claimNumber }, 'Claim creation rejected - invalid or inactive policy');
+          claimNumber,
+          operation: 'create_claim_invalid_policy',
+          validationResult: 'policy_not_active_or_not_found'
+        }, 'Claim creation rejected - policy validation failed');
         res.status(400).json({
           success: false,
           message: 'Policy not found or not active'
@@ -240,12 +287,17 @@ router.post(
 
       // Verify policy belongs to same organization (multi-tenant security)
       if (policyValidation.policy.organizationId !== organizationId) {
-        logger.error({ requestId, 
+        logger.error({ 
+          requestId, 
           userId, 
           userOrgId: organizationId,
           policyOrgId: policyValidation.policy.organizationId, 
           policyId,
-          claimNumber }, 'Security violation - cross-organization claim attempt');
+          claimNumber,
+          operation: 'create_claim_security_violation',
+          securityEvent: 'cross_organization_access_attempt',
+          ip: req.ip
+        }, 'SECURITY VIOLATION - Cross-organization claim creation attempt blocked');
         res.status(403).json({
           success: false,
           message: 'Policy belongs to a different organization'
@@ -266,7 +318,8 @@ router.post(
         }
       });
 
-      logger.info({ requestId, 
+      logger.info({ 
+        requestId, 
         claimId: claim.id, 
         userId, 
         organizationId,
@@ -274,7 +327,21 @@ router.post(
         claimNumber, 
         claimAmount,
         status: claim.status,
-        createdAt: claim.createdAt }, 'Claim created successfully');
+        createdAt: claim.createdAt,
+        operation: 'create_claim_success',
+        claim: {
+          id: claim.id,
+          claimNumber,
+          status: 'SUBMITTED',
+          amount: claimAmount,
+          incidentDate: claim.incidentDate
+        },
+        policy: {
+          id: policyId,
+          type: policyValidation.policy.type,
+          number: policyValidation.policy.policyNumber
+        }
+      }, 'Claim created and submitted successfully');
 
       res.status(201).json({
         success: true,
@@ -282,23 +349,38 @@ router.post(
       });
     } catch (error) {
       if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002') {
-        logger.warn({ requestId, 
+        logger.warn({ 
+          requestId, 
           userId, 
           organizationId,
-          claimNumber }, 'Claim creation failed - duplicate claim number');
+          claimNumber,
+          operation: 'create_claim_duplicate',
+          errorCode: error.code
+        }, 'Claim creation failed - duplicate claim number detected');
         res.status(400).json({
           success: false,
           message: 'Claim number already exists'
         });
         return;
       }
-      logger.error({ requestId, 
+      logger.error({ 
+        requestId, 
         userId, 
         organizationId,
         policyId,
         claimNumber,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined }, 'Claim creation failed');
+        operation: 'create_claim_error',
+        claimData: {
+          claimNumber,
+          claimAmount,
+          policyId
+        },
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          name: error instanceof Error ? error.name : 'Error',
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      }, 'Claim creation failed unexpectedly');
       res.status(500).json({
         success: false,
         message: 'Failed to create claim'
@@ -324,12 +406,18 @@ router.put(
     const { status, approvedAmount, denialReason } = req.body;
     const userId = (req as AuthRequest).user!.userId;
     
-    logger.info({ requestId, 
+    logger.info({ 
+      requestId, 
       claimId, 
-      userId, 
-      newStatus: status, 
-      approvedAmount, 
-      hasDenialReason: !!denialReason }, 'Updating claim status');
+      userId,
+      operation: 'update_claim_status', 
+      transition: {
+        newStatus: status, 
+        approvedAmount, 
+        hasDenialReason: !!denialReason
+      },
+      ip: req.ip
+    }, 'Updating claim status - workflow transition');
     
     try {
       // Business logic: validate status transitions
@@ -338,7 +426,12 @@ router.put(
       });
 
       if (!currentClaim) {
-        logger.warn({ requestId, claimId, userId }, 'Claim status update failed - claim not found');
+        logger.warn({ 
+          requestId, 
+          claimId, 
+          userId,
+          operation: 'update_claim_not_found'
+        }, 'Claim status update failed - claim not found in database');
         res.status(404).json({
           success: false,
           message: 'Claim not found'
@@ -356,12 +449,17 @@ router.put(
       };
 
       if (!validTransitions[currentClaim.status].includes(status)) {
-        logger.warn({ requestId, 
+        logger.warn({ 
+          requestId, 
           claimId, 
           userId,
+          organizationId: currentClaim.organizationId,
           currentStatus: currentClaim.status, 
           requestedStatus: status,
-          validTransitions: validTransitions[currentClaim.status] }, 'Invalid claim status transition attempted');
+          validTransitions: validTransitions[currentClaim.status],
+          operation: 'update_claim_invalid_transition',
+          workflow: 'claims_status_machine'
+        }, 'Invalid claim status transition attempted - workflow violation');
         res.status(400).json({
           success: false,
           message: `Invalid status transition from ${currentClaim.status} to ${status}`
@@ -371,7 +469,13 @@ router.put(
 
       // Require approval amount for APPROVED status
       if (status === 'APPROVED' && !approvedAmount) {
-        logger.warn({ requestId, claimId, userId }, 'Claim approval rejected - missing approved amount');
+        logger.warn({ 
+          requestId, 
+          claimId, 
+          userId,
+          operation: 'update_claim_approval_missing_amount',
+          claimAmount: currentClaim.claimAmount
+        }, 'Claim approval rejected - approved amount is required');
         res.status(400).json({
           success: false,
           message: 'Approved amount required for APPROVED status'
@@ -381,7 +485,12 @@ router.put(
 
       // Require denial reason for DENIED status
       if (status === 'DENIED' && !denialReason) {
-        logger.warn({ requestId, claimId, userId }, 'Claim denial rejected - missing denial reason');
+        logger.warn({ 
+          requestId, 
+          claimId, 
+          userId,
+          operation: 'update_claim_denial_missing_reason'
+        }, 'Claim denial rejected - denial reason is required');
         res.status(400).json({
           success: false,
           message: 'Denial reason required for DENIED status'
@@ -420,14 +529,28 @@ router.put(
         return updatedClaim;
       });
 
-      logger.info({ requestId, 
+      logger.info({ 
+        requestId, 
         claimId, 
         userId,
         organizationId: currentClaim.organizationId,
         oldStatus: currentClaim.status, 
         newStatus: status,
         approvedAmount,
-        claimAmount: currentClaim.claimAmount }, 'Claim status updated successfully');
+        claimAmount: currentClaim.claimAmount,
+        operation: 'update_claim_success',
+        statusHistory: {
+          from: currentClaim.status,
+          to: status,
+          changedBy: userId,
+          reason: denialReason || 'Status update'
+        },
+        business: {
+          requested: currentClaim.claimAmount,
+          approved: approvedAmount || null,
+          approvalRate: approvedAmount ? ((approvedAmount / currentClaim.claimAmount) * 100).toFixed(2) + '%' : null
+        }
+      }, 'Claim status updated successfully');
 
       res.json({
         success: true,
@@ -435,18 +558,25 @@ router.put(
       });
     } catch (error) {
       if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2025') {
-        logger.warn({ requestId, claimId, userId }, 'Claim status update failed - claim not found');
+        logger.warn({ \n          requestId, \n          claimId, \n          userId,\n          operation: 'update_claim_not_found_transaction',\n          errorCode: error.code\n        }, 'Claim status update failed - claim not found during transaction');
         res.status(404).json({
           success: false,
           message: 'Claim not found'
         });
         return;
       }
-      logger.error({ requestId, 
+      logger.error({ 
+        requestId, 
         claimId, 
         userId,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined }, 'Claim status update failed');
+        operation: 'update_claim_error',
+        attemptedStatus: status,
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          name: error instanceof Error ? error.name : 'Error',
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      }, 'Claim status update failed unexpectedly');
       res.status(500).json({
         success: false,
         message: 'Failed to update claim status'

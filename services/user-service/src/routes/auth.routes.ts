@@ -9,13 +9,29 @@ router.post('/organizations', async (req: Request, res: Response) => {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const { name, slug, plan = 'free' } = req.body;
   
-  logger.info({ requestId, slug, plan, ip: req.ip }, 'Organization creation requested');
+  logger.info({ 
+    requestId, 
+    slug, 
+    plan, 
+    organizationName: name,
+    operation: 'create_organization',
+    ip: req.ip,
+    userAgent: req.get('user-agent')
+  }, 'Organization creation requested');
   
   try {
     // Check if slug is already taken
     const existing = await prisma.organization.findUnique({ where: { slug } });
     if (existing) {
-      logger.warn({ requestId, slug, existingOrgId: existing.id }, 'Organization creation failed - slug already exists');
+      logger.warn({ 
+        requestId, 
+        slug, 
+        existingOrgId: existing.id,
+        existingOrgName: existing.name,
+        operation: 'create_organization_duplicate',
+        attemptedName: name,
+        ip: req.ip
+      }, 'Organization creation failed - slug already exists in system');
       res.status(400).json({ success: false, message: 'Organization slug already exists' });
       return;
     }
@@ -29,8 +45,17 @@ router.post('/organizations', async (req: Request, res: Response) => {
       organizationId: organization.id, 
       slug, 
       plan,
-      createdAt: organization.createdAt 
-    }, 'Organization created successfully');
+      organizationName: organization.name,
+      createdAt: organization.createdAt,
+      operation: 'create_organization_success',
+      organization: {
+        id: organization.id,
+        name: organization.name,
+        slug,
+        plan,
+        status: organization.status
+      }
+    }, 'Organization created successfully - ready for user registration');
 
     res.status(201).json({ success: true, data: organization });
   } catch (error) {
@@ -38,9 +63,14 @@ router.post('/organizations', async (req: Request, res: Response) => {
     logger.error({ 
       requestId, 
       slug, 
-      error: message, 
-      stack: error instanceof Error ? error.stack : undefined 
-    }, 'Organization creation failed');
+      attemptedName: name,
+      operation: 'create_organization_error',
+      error: {
+        message: message,
+        stack: error instanceof Error ? error.stack : undefined
+      },
+      ip: req.ip
+    }, 'Organization creation failed unexpectedly');
     res.status(400).json({ success: false, message });
   }
 });
@@ -55,9 +85,17 @@ router.post('/register', async (req: Request, res: Response) => {
     organizationId, 
     role, 
     orgRole,
+    operation: 'register_user',
+    userDetails: {
+      email,
+      firstName,
+      lastName,
+      role,
+      orgRole
+    },
     ip: req.ip,
     userAgent: req.get('user-agent')
-  }, 'User registration started');
+  }, 'User registration initiated');
   
   try {
     const startTime = Date.now();
@@ -78,9 +116,24 @@ router.post('/register', async (req: Request, res: Response) => {
       email, 
       organizationId,
       role,
+      orgRole,
       duration,
-      hasToken: !!result.token
-    }, 'User registered successfully');
+      hasToken: !!result.token,
+      operation: 'register_user_success',
+      user: {
+        id: result.user.id,
+        email,
+        firstName: result.user.firstName,
+        lastName: result.user.lastName,
+        role,
+        orgRole,
+        organizationId
+      },
+      performance: {
+        registrationTimeMs: duration,
+        passwordHashingIncluded: true
+      }
+    }, 'User registered successfully - account created with authentication token');
     
     res.status(201).json({ success: true, data: result });
   } catch (error) {
@@ -89,9 +142,14 @@ router.post('/register', async (req: Request, res: Response) => {
       requestId, 
       email, 
       organizationId, 
-      error: message,
-      stack: error instanceof Error ? error.stack : undefined
-    }, 'User registration failed');
+      attemptedRole: role,
+      operation: 'register_user_error',
+      error: {
+        message: message,
+        stack: error instanceof Error ? error.stack : undefined
+      },
+      ip: req.ip
+    }, 'User registration failed unexpectedly');
     res.status(400).json({ success: false, message });
   }
 });
@@ -103,9 +161,10 @@ router.post('/login', async (req: Request, res: Response) => {
   logger.info({ 
     requestId, 
     email, 
+    operation: 'login_attempt',
     ip: req.ip, 
-    userAgent: req.get('user-agent') 
-  }, 'Login attempt started');
+    userAgent: req.get('user-agent')
+  }, 'User login attempt initiated');
   
   try {
     const startTime = Date.now();
@@ -118,9 +177,26 @@ router.post('/login', async (req: Request, res: Response) => {
       email, 
       organizationId: result.user.organizationId,
       role: result.user.role,
+      orgRole: result.user.orgRole,
       duration,
-      ip: req.ip
-    }, 'Login successful');
+      ip: req.ip,
+      operation: 'login_success',
+      user: {
+        id: result.user.id,
+        email,
+        organizationId: result.user.organizationId,
+        role: result.user.role,
+        orgRole: result.user.orgRole
+      },
+      performance: {
+        loginTimeMs: duration,
+        passwordVerificationIncluded: true
+      },
+      security: {
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent')?.substring(0, 100)
+      }
+    }, 'User login successful - authentication token issued');
     
     res.json({ success: true, data: result });
   } catch (error) {
@@ -130,8 +206,10 @@ router.post('/login', async (req: Request, res: Response) => {
       email, 
       reason: message, 
       ip: req.ip,
-      userAgent: req.get('user-agent')
-    }, 'Login failed');
+      userAgent: req.get('user-agent'),
+      operation: 'login_failed',
+      failureType: message.includes('Invalid') ? 'invalid_credentials' : 'other'
+    }, 'User login failed - authentication rejected');
     res.status(401).json({ success: false, message });
   }
 });
@@ -147,16 +225,26 @@ router.post('/verify', async (req: Request, res: Response) => {
       requestId, 
       userId: payload.userId, 
       email: payload.email,
-      ip: req.ip 
-    }, 'Token verified successfully');
+      organizationId: payload.organizationId,
+      operation: 'verify_token_success',
+      tokenPayload: {
+        userId: payload.userId,
+        email: payload.email,
+        organizationId: payload.organizationId,
+        role: payload.role
+      },
+      ip: req.ip
+    }, 'JWT token verified successfully');
     
     res.json({ success: true, data: payload });
   } catch (error) {
     logger.warn({ 
       requestId, 
       reason: error instanceof Error ? error.message : 'Invalid token', 
-      ip: req.ip 
-    }, 'Token verification failed');
+      operation: 'verify_token_failed',
+      errorType: error instanceof Error ? error.name : 'TokenError',
+      ip: req.ip
+    }, 'JWT token verification failed - invalid or expired token');
     res.status(401).json({ success: false, message: 'Invalid token' });
   }
 });
@@ -167,7 +255,12 @@ router.get('/me', async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      logger.warn({ requestId, ip: req.ip }, 'Get current user failed - no token provided');
+      logger.warn({ 
+        requestId, 
+        operation: 'get_current_user_no_token',
+        endpoint: '/auth/me',
+        ip: req.ip
+      }, 'Get current user failed - no authentication token provided');
       res.status(401).json({ success: false, message: 'No token provided' });
       return;
     }
@@ -198,19 +291,41 @@ router.get('/me', async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      logger.error({ requestId, userId: payload.userId, email: payload.email }, 'User not found for valid token');
+      logger.error({ 
+        requestId, 
+        userId: payload.userId, 
+        email: payload.email,
+        operation: 'get_current_user_not_found',
+        issue: 'valid_token_but_user_deleted',
+        ip: req.ip
+      }, 'INCONSISTENCY - User not found for valid JWT token (possible data integrity issue)');
       res.status(404).json({ success: false, message: 'User not found' });
       return;
     }
 
-    logger.debug({ requestId, userId: user.id, email: user.email, organizationId: user.organizationId }, 'Current user retrieved');
+    logger.debug({ 
+      requestId, 
+      userId: user.id, 
+      email: user.email, 
+      organizationId: user.organizationId,
+      operation: 'get_current_user_success',
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        orgRole: user.orgRole,
+        organizationId: user.organizationId
+      }
+    }, 'Current user profile retrieved successfully');
     res.json({ success: true, data: user });
   } catch (error) {
     logger.warn({ 
       requestId, 
       error: error instanceof Error ? error.message : 'Invalid token', 
-      ip: req.ip 
-    }, 'Get current user failed - invalid token');
+      operation: 'get_current_user_invalid_token',
+      errorType: error instanceof Error ? error.name : 'TokenError',
+      ip: req.ip
+    }, 'Get current user failed - JWT token is invalid or expired');
     res.status(401).json({ success: false, message: 'Invalid token' });
   }
 });
