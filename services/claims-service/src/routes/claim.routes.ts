@@ -689,7 +689,13 @@ router.put(
       });
     } catch (error) {
       if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2025') {
-        logger.warn({ \n          requestId, \n          claimId, \n          userId,\n          operation: 'update_claim_not_found_transaction',\n          errorCode: error.code\n        }, 'Claim status update failed - claim not found during transaction');
+        logger.warn({ 
+          requestId, 
+          claimId, 
+          userId,
+          operation: 'update_claim_not_found_transaction',
+          errorCode: error.code
+        }, 'Claim status update failed - claim not found during transaction');
         res.status(404).json({
           success: false,
           message: 'Claim not found'
