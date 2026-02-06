@@ -10,11 +10,11 @@ set -e
 # Parse arguments
 if [[ "$1" =~ ^(api-gateway|user-service|policy-service|claims-service|quotes-service)$ ]]; then
     SPECIFIC_SERVICE="$1"
-    AWS_REGION="${2:-us-west-2}"
+    AWS_REGION="${2:-us-east-1}"
     AWS_ACCOUNT_ID="${3}"
 else
     SPECIFIC_SERVICE=""
-    AWS_REGION="${1:-us-west-2}"
+    AWS_REGION="${1:-us-east-1}"
     AWS_ACCOUNT_ID="${2}"
 fi
 

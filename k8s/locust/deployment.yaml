@@ -24,7 +24,7 @@ spec:
         env:
         - name: LOCUST_MODE
           value: "master"
-        - name: TARGET_HOST
+        - name: LOCUST_HOST
           valueFrom:
             configMapKeyRef:
               name: locust-config
