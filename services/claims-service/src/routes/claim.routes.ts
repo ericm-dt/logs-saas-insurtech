@@ -534,7 +534,8 @@ router.put(
   async (req: AuthRequest, res): Promise<void> => {
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const claimId = req.params.id;
-    const { status, approvedAmount, denialReason } = req.body;
+    const { status, denialReason } = req.body;
+    const approvedAmount = req.body.approvedAmount ? parseFloat(req.body.approvedAmount) : undefined;
     const userId = (req as AuthRequest).user!.userId;
     
     logger.info({ 
@@ -731,7 +732,8 @@ router.post('/:id/approve', authenticate, param('id').isUUID(), validate([
   const claimId = req.params.id;
   const userId = (req as AuthRequest).user!.userId;
   const organizationId = (req as AuthRequest).user!.organizationId;
-  const { approvedAmount, reason } = req.body;
+  const { reason } = req.body;
+  const approvedAmount = parseFloat(req.body.approvedAmount);
 
   logger.info({ 
     requestId, 
