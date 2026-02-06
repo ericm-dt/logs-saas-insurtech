@@ -680,7 +680,7 @@ router.put(
         business: {
           requested: currentClaim.claimAmount,
           approved: approvedAmount || null,
-          approvalRate: approvedAmount ? ((approvedAmount / currentClaim.claimAmount) * 100).toFixed(2) + '%' : null
+          approvalRate: approvedAmount ? ((approvedAmount / Number(currentClaim.claimAmount)) * 100).toFixed(2) + '%' : null
         }
       }, 'Claim status updated successfully');
 
@@ -806,7 +806,7 @@ router.post('/:id/approve', authenticate, param('id').isUUID(), validate([
       return updatedClaim;
     });
 
-    const approvalRate = ((approvedAmount / currentClaim.claimAmount) * 100).toFixed(2);
+    const approvalRate = ((approvedAmount / Number(currentClaim.claimAmount)) * 100).toFixed(2);
 
     logger.info({ 
       requestId, 
