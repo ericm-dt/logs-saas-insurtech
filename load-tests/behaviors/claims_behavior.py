@@ -58,8 +58,8 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
             policy = random.choice(policies)
             response.success()
         
-        # Customer explains the incident
-        time.sleep(random.uniform(2, 4))
+        # Agent discusses which policy applies, customer explains incident details, agent takes notes (5-10 seconds)
+        time.sleep(random.uniform(5, 10))
         
         # Step 2: File a claim on the policy
         claim_descriptions = [
@@ -92,8 +92,8 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
             claim_id = response.json().get("data", {}).get("id")
             response.success()
         
-        # Agent reviews the filed claim
-        time.sleep(random.uniform(1, 3))
+        # Agent reviews the filed claim confirmation and provides claim number to customer (2-4 seconds)
+        time.sleep(random.uniform(2, 4))
         
         # Step 3: View the claim details
         self.client.get(
@@ -135,8 +135,8 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
             claim_id = claim['id']
             response.success()
         
-        # Agent investigates the claim
-        time.sleep(random.uniform(2, 5))
+        # Agent opens and reads claim details thoroughly (5-10 seconds)
+        time.sleep(random.uniform(5, 10))
         
         # Step 2: Update to under_review (if not already)
         if status_to_find == 'SUBMITTED':
@@ -147,8 +147,8 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
                 name="2. Mark Under Review"
             )
             
-            # Agent reviews documentation and makes decision
-            time.sleep(random.uniform(3, 7))
+            # Agent reviews documentation, checks policy terms, analyzes photos/evidence (8-15 seconds)
+            time.sleep(random.uniform(8, 15))
         
         # Step 3: Approve or deny the claim (80% approval rate)
         if random.random() < 0.8:
@@ -183,8 +183,8 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
                 name="3. Denied Claim"
             )
         
-        # Agent finalizes decision
-        time.sleep(random.uniform(1, 2))
+        # Agent writes notes and prepares communication to customer (2-4 seconds)
+        time.sleep(random.uniform(2, 4))
         
         # Step 4: Check claim history
         self.client.get(
@@ -216,8 +216,8 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
             if response.status_code == 200:
                 claims = response.json().get("data", [])
                 if claims:
-                    # Agent scans claims queue
-                    time.sleep(random.uniform(1, 3))
+                    # Agent scans claims queue, reviewing amounts and dates (3-6 seconds)
+                    time.sleep(random.uniform(3, 6))
                     
                     # Step 2: View specific claim
                     claim = random.choice(claims)
@@ -227,8 +227,8 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
                         name="2. View Claim Details"
                     )
                     
-                    # Agent reads claim information
-                    time.sleep(random.uniform(2, 4))
+                    # Agent reads full claim details and attached documentation (4-8 seconds)
+                    time.sleep(random.uniform(4, 8))
                     
                     # Step 3: View claim history
                     self.client.get(

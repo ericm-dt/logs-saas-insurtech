@@ -61,8 +61,8 @@ class QuoteManagementBehavior(BaseAgentBehavior):
                 return
             response.success()
         
-        # User reviews premium calculation
-        time.sleep(random.uniform(1, 3))
+        # Agent discusses coverage options with customer, reviews their needs (3-6 seconds)
+        time.sleep(random.uniform(3, 6))
         
         # Step 2: Create the quote
         quote_data = {
@@ -86,8 +86,8 @@ class QuoteManagementBehavior(BaseAgentBehavior):
                 response.failure(f"Failed to create quote: {response.status_code}")
                 return
         
-        # User thinks about the quote
-        time.sleep(random.uniform(2, 5))
+        # Agent and customer review quote details together, discuss terms (4-8 seconds)
+        time.sleep(random.uniform(4, 8))
         
         # Step 3: View the quote details
         self.client.get(
@@ -128,8 +128,8 @@ class QuoteManagementBehavior(BaseAgentBehavior):
             quote_id = quote["id"]
             response.success()
         
-        # User decides to convert
-        time.sleep(random.uniform(1, 4))
+        # Customer confirms they want to proceed, agent prepares conversion (3-7 seconds)
+        time.sleep(random.uniform(3, 7))
         
         # Step 2: Convert to policy
         with self.client.post(
@@ -142,8 +142,8 @@ class QuoteManagementBehavior(BaseAgentBehavior):
                 policy_id = response.json().get("data", {}).get("policy", {}).get("id")
                 response.success()
                 
-                # User waits for policy confirmation
-                time.sleep(random.uniform(1, 3))
+                # Agent reviews policy confirmation with customer, explains next steps (3-6 seconds)
+                time.sleep(random.uniform(3, 6))
                 
                 # Step 3: View the new policy
                 self.client.get(
@@ -188,8 +188,8 @@ class QuoteManagementBehavior(BaseAgentBehavior):
             if response.status_code == 200:
                 quotes = response.json().get("data", [])
                 if quotes:
-                    # User reviews the list
-                    time.sleep(random.uniform(2, 4))
+                    # Agent scans through the quote list, comparing options (3-7 seconds)
+                    time.sleep(random.uniform(3, 7))
                     
                     # Step 2: View a specific quote
                     quote = random.choice(quotes)
@@ -199,8 +199,8 @@ class QuoteManagementBehavior(BaseAgentBehavior):
                         name="2. View Quote Details"
                     )
                     
-                    # User examines quote details
-                    time.sleep(random.uniform(1, 3))
+                    # Agent thoroughly reviews all quote details, coverage amounts, terms (4-8 seconds)
+                    time.sleep(random.uniform(4, 8))
                     
                     # Step 3: Check quote history
                     self.client.get(
@@ -244,8 +244,8 @@ class QuoteManagementBehavior(BaseAgentBehavior):
             if not policies:
                 return
             
-            # User scans policy list
-            time.sleep(random.uniform(1, 3))
+            # Agent reviews policy list looking for target policy (2-5 seconds)
+            time.sleep(random.uniform(2, 5))
             
             policy = random.choice(policies)
             response.success()
@@ -257,8 +257,8 @@ class QuoteManagementBehavior(BaseAgentBehavior):
             name="2. View Policy Details"
         )
         
-        # User reviews policy information
-        time.sleep(random.uniform(2, 4))
+        # Agent reads policy information and discusses with customer (5-9 seconds)
+        time.sleep(random.uniform(5, 9))
         
         # Step 3: Update policy status
         new_status = random.choice(["ACTIVE", "CANCELLED"])
