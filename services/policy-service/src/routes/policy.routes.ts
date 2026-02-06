@@ -180,12 +180,33 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
 
 // Get policy by ID
 router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const policyId = req.params.id;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+
+  logger.info({ 
+    requestId, 
+    policyId, 
+    userId, 
+    organizationId,
+    operation: 'get_policy_by_id',
+    ip: req.ip
+  }, 'Fetching policy by ID');
+
   try {
     const policy = await prisma.policy.findUnique({
       where: { id: req.params.id }
     });
 
     if (!policy) {
+      logger.warn({ 
+        requestId, 
+        policyId, 
+        userId, 
+        organizationId,
+        operation: 'get_policy_not_found'
+      }, 'Policy not found by ID');
       res.status(404).json({
         success: false,
         message: 'Policy not found'
@@ -193,11 +214,37 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
       return;
     }
 
+    logger.info({ 
+      requestId, 
+      policyId: policy.id, 
+      userId, 
+      organizationId,
+      operation: 'get_policy_success',
+      policy: {
+        policyNumber: policy.policyNumber,
+        type: policy.type,
+        status: policy.status,
+        premium: policy.premium,
+        coverageAmount: policy.coverageAmount
+      }
+    }, 'Policy retrieved successfully');
+
     res.json({
       success: true,
       data: policy
     });
   } catch (error) {
+    logger.error({ 
+      requestId, 
+      policyId, 
+      userId, 
+      organizationId,
+      operation: 'get_policy_error',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }, 'Failed to fetch policy by ID');
     res.status(500).json({
       success: false,
       message: 'Failed to fetch policy'
@@ -207,17 +254,52 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
 
 // Get policy status history
 router.get('/:id/history', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const policyId = req.params.id;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+
+  logger.info({ 
+    requestId, 
+    policyId, 
+    userId, 
+    organizationId,
+    operation: 'get_policy_history',
+    ip: req.ip
+  }, 'Fetching policy status history');
+
   try {
     const history = await prisma.policyStatusHistory.findMany({
       where: { policyId: req.params.id },
       orderBy: { changedAt: 'desc' }
     });
 
+    logger.info({ 
+      requestId, 
+      policyId, 
+      userId, 
+      organizationId,
+      operation: 'get_policy_history_success',
+      historyCount: history.length,
+      hasChanges: history.length > 0
+    }, 'Policy history retrieved successfully');
+
     res.json({
       success: true,
       data: history
     });
   } catch (error) {
+    logger.error({ 
+      requestId, 
+      policyId, 
+      userId, 
+      organizationId,
+      operation: 'get_policy_history_error',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }, 'Failed to fetch policy history');
     res.status(500).json({
       success: false,
       message: 'Failed to fetch policy history'
@@ -512,12 +594,36 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
   body('description').notEmpty().withMessage('Description is required'),
   body('claimAmount').isNumeric().withMessage('Claim amount must be numeric')
 ]), async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const policyId = req.params.id;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+  const { incidentDate, description, claimAmount } = req.body;
+
+  logger.info({ 
+    requestId, 
+    policyId, 
+    userId, 
+    organizationId,
+    operation: 'file_claim_from_policy',
+    claimAmount,
+    incidentDate,
+    ip: req.ip
+  }, 'Filing claim from policy endpoint');
+
   try {
     const policy = await prisma.policy.findUnique({
       where: { id: req.params.id }
     });
 
     if (!policy) {
+      logger.warn({ 
+        requestId, 
+        policyId, 
+        userId, 
+        organizationId,
+        operation: 'file_claim_policy_not_found'
+      }, 'Cannot file claim - policy not found');
       res.status(404).json({
         success: false,
         message: 'Policy not found'
@@ -526,6 +632,14 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
     }
 
     if (policy.status !== 'ACTIVE') {
+      logger.warn({ 
+        requestId, 
+        policyId, 
+        userId, 
+        organizationId,
+        policyStatus: policy.status,
+        operation: 'file_claim_policy_inactive'
+      }, 'Cannot file claim - policy is not active');
       res.status(400).json({
         success: false,
         message: 'Claims can only be filed on ACTIVE policies'
@@ -533,25 +647,48 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
       return;
     }
 
-    const { incidentDate, description, claimAmount } = req.body;
-
     // Call claims service to create claim
     const CLAIMS_SERVICE_URL = process.env.CLAIMS_SERVICE_URL || 'http://localhost:3004';
     const token = req.headers.authorization?.substring(7) || '';
+    const claimNumber = `CLM-${Date.now()}`;
+
+    logger.info({ 
+      requestId, 
+      policyId, 
+      claimNumber,
+      serviceUrl: CLAIMS_SERVICE_URL,
+      operation: 'file_claim_calling_claims_service'
+    }, 'Calling claims service to create claim');
 
     try {
+      const startTime = Date.now();
       const claimResponse = await axios.post(
         `${CLAIMS_SERVICE_URL}/api/claims`,
         {
           userId: policy.userId,
           policyId: policy.id,
-          claimNumber: `CLM-${Date.now()}`,
+          claimNumber,
           incidentDate,
           description,
           claimAmount
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      const duration = Date.now() - startTime;
+
+      logger.info({ 
+        requestId, 
+        policyId, 
+        claimId: claimResponse.data.data?.id,
+        claimNumber,
+        userId, 
+        organizationId,
+        operation: 'file_claim_success',
+        claimAmount,
+        performance: {
+          claimsServiceDuration: duration
+        }
+      }, 'Claim filed successfully from policy');
 
       res.status(201).json({
         success: true,
@@ -559,12 +696,48 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
         message: 'Claim filed successfully'
       });
     } catch (claimError) {
+      logger.error({ 
+        requestId, 
+        policyId, 
+        claimNumber,
+        serviceUrl: CLAIMS_SERVICE_URL,
+        operation: 'file_claim_service_error',
+        error: {
+          message: claimError instanceof Error ? claimError.message : 'Unknown error',
+          isAxiosError: (claimError as any).isAxiosError,
+          responseStatus: (claimError as any).response?.status
+        }
+      }, 'Claims service call failed');
+    } catch (claimError) {
+      logger.error({ 
+        requestId, 
+        policyId, 
+        claimNumber,
+        serviceUrl: CLAIMS_SERVICE_URL,
+        operation: 'file_claim_service_error',
+        error: {
+          message: claimError instanceof Error ? claimError.message : 'Unknown error',
+          isAxiosError: (claimError as any).isAxiosError,
+          responseStatus: (claimError as any).response?.status
+        }
+      }, 'Claims service call failed');
       res.status(500).json({
         success: false,
         message: 'Failed to create claim'
       });
     }
   } catch (error) {
+    logger.error({ 
+      requestId, 
+      policyId, 
+      userId, 
+      organizationId,
+      operation: 'file_claim_error',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }, 'Failed to file claim from policy');
     res.status(500).json({
       success: false,
       message: 'Failed to file claim'
@@ -574,6 +747,19 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
 
 // Get my policies (user-scoped endpoint)
 router.get('/my/policies', authenticate, async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+
+  logger.info({ 
+    requestId, 
+    userId, 
+    organizationId,
+    operation: 'get_my_policies',
+    filters: req.query,
+    ip: req.ip
+  }, 'Fetching user-scoped policies');
+
   try {
     const { status, page = '1', limit = '50' } = req.query;
     
@@ -588,6 +774,7 @@ router.get('/my/policies', authenticate, async (req: AuthRequest, res): Promise<
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
+    const startTime = Date.now();
     const [policies, total] = await Promise.all([
       prisma.policy.findMany({
         where,
@@ -597,6 +784,23 @@ router.get('/my/policies', authenticate, async (req: AuthRequest, res): Promise<
       }),
       prisma.policy.count({ where })
     ]);
+    const queryDuration = Date.now() - startTime;
+
+    logger.info({ 
+      requestId, 
+      userId, 
+      organizationId,
+      operation: 'get_my_policies_success',
+      results: {
+        count: policies.length,
+        total,
+        page: pageNum,
+        limit: limitNum
+      },
+      performance: {
+        queryDuration
+      }
+    }, 'User policies fetched successfully');
 
     res.json({
       success: true,
@@ -609,6 +813,16 @@ router.get('/my/policies', authenticate, async (req: AuthRequest, res): Promise<
       }
     });
   } catch (error) {
+    logger.error({ 
+      requestId, 
+      userId, 
+      organizationId,
+      operation: 'get_my_policies_error',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }, 'Failed to fetch user policies');
     res.status(500).json({
       success: false,
       message: 'Failed to fetch your policies'
@@ -618,10 +832,32 @@ router.get('/my/policies', authenticate, async (req: AuthRequest, res): Promise<
 
 // Delete policy
 router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const policyId = req.params.id;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+
+  logger.info({ 
+    requestId, 
+    policyId, 
+    userId, 
+    organizationId,
+    operation: 'delete_policy',
+    ip: req.ip
+  }, 'Deleting policy');
+
   try {
     await prisma.policy.delete({
       where: { id: req.params.id }
     });
+
+    logger.info({ 
+      requestId, 
+      policyId, 
+      userId, 
+      organizationId,
+      operation: 'delete_policy_success'
+    }, 'Policy deleted successfully');
 
     res.json({
       success: true,
@@ -629,12 +865,31 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      logger.warn({ 
+        requestId, 
+        policyId, 
+        userId, 
+        organizationId,
+        operation: 'delete_policy_not_found',
+        errorCode: error.code
+      }, 'Policy deletion failed - policy not found');
       res.status(404).json({
         success: false,
         message: 'Policy not found'
       });
       return;
     }
+    logger.error({ 
+      requestId, 
+      policyId, 
+      userId, 
+      organizationId,
+      operation: 'delete_policy_error',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }, 'Failed to delete policy');
     res.status(500).json({
       success: false,
       message: 'Failed to delete policy'

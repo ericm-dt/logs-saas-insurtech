@@ -94,6 +94,19 @@ async function validatePolicy(policyId: string, token: string): Promise<{ valid:
 
 // Get all claims
 router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+
+  logger.info({ 
+    requestId, 
+    userId, 
+    organizationId,
+    operation: 'list_claims',
+    filters: req.query,
+    ip: req.ip
+  }, 'Fetching claims list for organization');
+
   try {
     const {
       status,
@@ -144,6 +157,7 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
+    const startTime = Date.now();
     const [claims, total] = await Promise.all([
       prisma.claim.findMany({
         where,
@@ -153,6 +167,31 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
       }),
       prisma.claim.count({ where })
     ]);
+    const queryDuration = Date.now() - startTime;
+
+    logger.info({ 
+      requestId, 
+      userId, 
+      organizationId,
+      operation: 'list_claims_success',
+      results: {
+        count: claims.length,
+        total,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(total / limitNum),
+        hasMore: (pageNum * limitNum) < total
+      },
+      performance: {
+        queryDuration,
+        avgPerClaim: claims.length > 0 ? (queryDuration / claims.length).toFixed(2) : 0
+      },
+      filters: {
+        applied: Object.keys(where).length - 1, // -1 for organizationId
+        hasDateFilter: !!(incidentDateFrom || incidentDateTo),
+        hasAmountFilter: !!(minClaimAmount || maxClaimAmount)
+      }
+    }, `Claims fetched successfully - ${claims.length} of ${total} total`);
 
     res.json({
       success: true,
@@ -165,6 +204,16 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
       }
     });
   } catch (error) {
+    logger.error({ 
+      requestId, 
+      userId, 
+      organizationId,
+      operation: 'list_claims_error',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }, 'Failed to fetch claims');
     res.status(500).json({
       success: false,
       message: 'Failed to fetch claims'
@@ -174,12 +223,33 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
 
 // Get claim by ID
 router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const claimId = req.params.id;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+
+  logger.info({ 
+    requestId, 
+    claimId, 
+    userId, 
+    organizationId,
+    operation: 'get_claim_by_id',
+    ip: req.ip
+  }, 'Fetching claim by ID');
+
   try {
     const claim = await prisma.claim.findUnique({
       where: { id: req.params.id }
     });
 
     if (!claim) {
+      logger.warn({ 
+        requestId, 
+        claimId, 
+        userId, 
+        organizationId,
+        operation: 'get_claim_not_found'
+      }, 'Claim not found by ID');
       res.status(404).json({
         success: false,
         message: 'Claim not found'
@@ -187,11 +257,37 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
       return;
     }
 
+    logger.info({ 
+      requestId, 
+      claimId: claim.id, 
+      userId, 
+      organizationId,
+      operation: 'get_claim_success',
+      claim: {
+        claimNumber: claim.claimNumber,
+        status: claim.status,
+        claimAmount: claim.claimAmount,
+        approvedAmount: claim.approvedAmount,
+        policyId: claim.policyId
+      }
+    }, 'Claim retrieved successfully');
+
     res.json({
       success: true,
       data: claim
     });
   } catch (error) {
+    logger.error({ 
+      requestId, 
+      claimId, 
+      userId, 
+      organizationId,
+      operation: 'get_claim_error',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }, 'Failed to fetch claim by ID');
     res.status(500).json({
       success: false,
       message: 'Failed to fetch claim'
@@ -201,17 +297,52 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
 
 // Get claim status history
 router.get('/:id/history', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const claimId = req.params.id;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+
+  logger.info({ 
+    requestId, 
+    claimId, 
+    userId, 
+    organizationId,
+    operation: 'get_claim_history',
+    ip: req.ip
+  }, 'Fetching claim status history');
+
   try {
     const history = await prisma.claimStatusHistory.findMany({
       where: { claimId: req.params.id },
       orderBy: { changedAt: 'desc' }
     });
 
+    logger.info({ 
+      requestId, 
+      claimId, 
+      userId, 
+      organizationId,
+      operation: 'get_claim_history_success',
+      historyCount: history.length,
+      hasChanges: history.length > 0
+    }, 'Claim history retrieved successfully');
+
     res.json({
       success: true,
       data: history
     });
   } catch (error) {
+    logger.error({ 
+      requestId, 
+      claimId, 
+      userId, 
+      organizationId,
+      operation: 'get_claim_history_error',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }, 'Failed to fetch claim history');
     res.status(500).json({
       success: false,
       message: 'Failed to fetch claim history'
@@ -590,14 +721,36 @@ router.post('/:id/approve', authenticate, param('id').isUUID(), validate([
   body('approvedAmount').isNumeric().withMessage('Approved amount must be numeric'),
   body('reason').optional().isString().withMessage('Reason must be string')
 ]), async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const claimId = req.params.id;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+  const { approvedAmount, reason } = req.body;
+
+  logger.info({ 
+    requestId, 
+    claimId, 
+    userId, 
+    organizationId,
+    operation: 'approve_claim',
+    approvedAmount,
+    reason,
+    ip: req.ip
+  }, 'Approving claim');
+
   try {
-    const { approvedAmount, reason } = req.body;
-    
     const currentClaim = await prisma.claim.findUnique({
       where: { id: req.params.id }
     });
 
     if (!currentClaim) {
+      logger.warn({ 
+        requestId, 
+        claimId, 
+        userId, 
+        organizationId,
+        operation: 'approve_claim_not_found'
+      }, 'Claim approval failed - claim not found');
       res.status(404).json({
         success: false,
         message: 'Claim not found'
@@ -606,6 +759,14 @@ router.post('/:id/approve', authenticate, param('id').isUUID(), validate([
     }
 
     if (currentClaim.status !== 'UNDER_REVIEW') {
+      logger.warn({ 
+        requestId, 
+        claimId, 
+        userId, 
+        organizationId,
+        operation: 'approve_claim_invalid_status',
+        currentStatus: currentClaim.status
+      }, 'Claim approval failed - invalid status (must be UNDER_REVIEW)');
       res.status(400).json({
         success: false,
         message: 'Only claims under review can be approved'
@@ -637,12 +798,49 @@ router.post('/:id/approve', authenticate, param('id').isUUID(), validate([
       return updatedClaim;
     });
 
+    const approvalRate = ((approvedAmount / currentClaim.claimAmount) * 100).toFixed(2);
+
+    logger.info({ 
+      requestId, 
+      claimId, 
+      userId, 
+      organizationId,
+      operation: 'approve_claim_success',
+      workflow: {
+        from: currentClaim.status,
+        to: 'APPROVED',
+        changedBy: userId,
+        reason: reason || 'Claim approved'
+      },
+      amounts: {
+        requested: currentClaim.claimAmount,
+        approved: approvedAmount,
+        approvalRate: approvalRate + '%'
+      },
+      claim: {
+        claimNumber: currentClaim.claimNumber,
+        policyId: currentClaim.policyId
+      }
+    }, `Claim approved - ${approvalRate}% of requested amount`);
+
     res.json({
       success: true,
       data: result,
       message: 'Claim approved successfully'
     });
   } catch (error) {
+    logger.error({ 
+      requestId, 
+      claimId, 
+      userId, 
+      organizationId,
+      operation: 'approve_claim_error',
+      approvedAmount,
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }, 'Failed to approve claim');
     res.status(500).json({
       success: false,
       message: 'Failed to approve claim'
@@ -654,14 +852,35 @@ router.post('/:id/approve', authenticate, param('id').isUUID(), validate([
 router.post('/:id/deny', authenticate, param('id').isUUID(), validate([
   body('reason').notEmpty().withMessage('Denial reason is required')
 ]), async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const claimId = req.params.id;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+  const { reason } = req.body;
+
+  logger.info({ 
+    requestId, 
+    claimId, 
+    userId, 
+    organizationId,
+    operation: 'deny_claim',
+    reason,
+    ip: req.ip
+  }, 'Denying claim');
+
   try {
-    const { reason } = req.body;
-    
     const currentClaim = await prisma.claim.findUnique({
       where: { id: req.params.id }
     });
 
     if (!currentClaim) {
+      logger.warn({ 
+        requestId, 
+        claimId, 
+        userId, 
+        organizationId,
+        operation: 'deny_claim_not_found'
+      }, 'Claim denial failed - claim not found');
       res.status(404).json({
         success: false,
         message: 'Claim not found'
@@ -670,6 +889,14 @@ router.post('/:id/deny', authenticate, param('id').isUUID(), validate([
     }
 
     if (!['SUBMITTED', 'UNDER_REVIEW'].includes(currentClaim.status)) {
+      logger.warn({ 
+        requestId, 
+        claimId, 
+        userId, 
+        organizationId,
+        operation: 'deny_claim_invalid_status',
+        currentStatus: currentClaim.status
+      }, 'Claim denial failed - invalid status (must be SUBMITTED or UNDER_REVIEW)');
       res.status(400).json({
         success: false,
         message: 'Only submitted or under-review claims can be denied'
@@ -701,12 +928,43 @@ router.post('/:id/deny', authenticate, param('id').isUUID(), validate([
       return updatedClaim;
     });
 
+    logger.info({ 
+      requestId, 
+      claimId, 
+      userId, 
+      organizationId,
+      operation: 'deny_claim_success',
+      workflow: {
+        from: currentClaim.status,
+        to: 'DENIED',
+        changedBy: userId,
+        reason
+      },
+      claim: {
+        claimNumber: currentClaim.claimNumber,
+        policyId: currentClaim.policyId,
+        claimAmount: currentClaim.claimAmount
+      }
+    }, 'Claim denied');
+
     res.json({
       success: true,
       data: result,
       message: 'Claim denied'
     });
   } catch (error) {
+    logger.error({ 
+      requestId, 
+      claimId, 
+      userId, 
+      organizationId,
+      operation: 'deny_claim_error',
+      reason,
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }, 'Failed to deny claim');
     res.status(500).json({
       success: false,
       message: 'Failed to deny claim'
@@ -716,6 +974,19 @@ router.post('/:id/deny', authenticate, param('id').isUUID(), validate([
 
 // Get my claims (user-scoped endpoint)
 router.get('/my/claims', authenticate, async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+
+  logger.info({ 
+    requestId, 
+    userId, 
+    organizationId,
+    operation: 'get_my_claims',
+    filters: req.query,
+    ip: req.ip
+  }, 'Fetching user-scoped claims');
+
   try {
     const { status, page = '1', limit = '50' } = req.query;
     
@@ -730,6 +1001,7 @@ router.get('/my/claims', authenticate, async (req: AuthRequest, res): Promise<vo
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
+    const startTime = Date.now();
     const [claims, total] = await Promise.all([
       prisma.claim.findMany({
         where,
@@ -739,6 +1011,21 @@ router.get('/my/claims', authenticate, async (req: AuthRequest, res): Promise<vo
       }),
       prisma.claim.count({ where })
     ]);
+    const queryDuration = Date.now() - startTime;
+
+    logger.info({ 
+      requestId, 
+      userId, 
+      organizationId,
+      operation: 'get_my_claims_success',
+      results: {
+        count: claims.length,
+        total,
+        page: pageNum,
+        pages: Math.ceil(total / limitNum)
+      },
+      performance: { queryDuration }
+    }, 'User claims fetched successfully');
 
     res.json({
       success: true,
@@ -751,6 +1038,16 @@ router.get('/my/claims', authenticate, async (req: AuthRequest, res): Promise<vo
       }
     });
   } catch (error) {
+    logger.error({ 
+      requestId, 
+      userId, 
+      organizationId,
+      operation: 'get_my_claims_error',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }, 'Failed to fetch user claims');
     res.status(500).json({
       success: false,
       message: 'Failed to fetch your claims'
@@ -760,10 +1057,32 @@ router.get('/my/claims', authenticate, async (req: AuthRequest, res): Promise<vo
 
 // Delete claim
 router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const claimId = req.params.id;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+
+  logger.info({ 
+    requestId, 
+    claimId, 
+    userId, 
+    organizationId,
+    operation: 'delete_claim',
+    ip: req.ip
+  }, 'Deleting claim');
+
   try {
     await prisma.claim.delete({
       where: { id: req.params.id }
     });
+
+    logger.info({ 
+      requestId, 
+      claimId, 
+      userId, 
+      organizationId,
+      operation: 'delete_claim_success'
+    }, 'Claim deleted successfully');
 
     res.json({
       success: true,
@@ -771,12 +1090,31 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
     });
   } catch (error) {
     if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2025') {
+      logger.warn({ 
+        requestId, 
+        claimId, 
+        userId, 
+        organizationId,
+        operation: 'delete_claim_not_found',
+        errorCode: error.code
+      }, 'Claim deletion failed - claim not found');
       res.status(404).json({
         success: false,
         message: 'Claim not found'
       });
       return;
     }
+    logger.error({ 
+      requestId, 
+      claimId, 
+      userId, 
+      organizationId,
+      operation: 'delete_claim_error',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }, 'Failed to delete claim');
     res.status(500).json({
       success: false,
       message: 'Failed to delete claim'

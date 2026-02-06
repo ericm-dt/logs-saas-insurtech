@@ -172,12 +172,33 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
 
 // Get quote by ID
 router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const quoteId = req.params.id;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+
+  logger.info({ 
+    requestId, 
+    quoteId, 
+    userId, 
+    organizationId,
+    operation: 'get_quote_by_id',
+    ip: req.ip
+  }, 'Fetching quote by ID');
+
   try {
     const quote = await prisma.quote.findUnique({
       where: { id: req.params.id }
     });
 
     if (!quote) {
+      logger.warn({ 
+        requestId, 
+        quoteId, 
+        userId, 
+        organizationId,
+        operation: 'get_quote_not_found'
+      }, 'Quote not found by ID');
       res.status(404).json({
         success: false,
         message: 'Quote not found'
@@ -185,11 +206,38 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
       return;
     }
 
+    logger.info({ 
+      requestId, 
+      quoteId: quote.id, 
+      userId, 
+      organizationId,
+      operation: 'get_quote_success',
+      quote: {
+        quoteNumber: quote.quoteNumber,
+        type: quote.type,
+        status: quote.status,
+        premium: quote.premium,
+        coverageAmount: quote.coverageAmount,
+        expiresAt: quote.expiresAt
+      }
+    }, 'Quote retrieved successfully');
+
     res.json({
       success: true,
       data: quote
     });
   } catch (error) {
+    logger.error({ 
+      requestId, 
+      quoteId, 
+      userId, 
+      organizationId,
+      operation: 'get_quote_error',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }, 'Failed to fetch quote by ID');
     res.status(500).json({
       success: false,
       message: 'Failed to fetch quote'
@@ -199,17 +247,51 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
 
 // Get quote status history
 router.get('/:id/history', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const quoteId = req.params.id;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+
+  logger.info({ 
+    requestId, 
+    quoteId, 
+    userId, 
+    organizationId,
+    operation: 'get_quote_history',
+    ip: req.ip
+  }, 'Fetching quote status history');
+
   try {
     const history = await prisma.quoteStatusHistory.findMany({
       where: { quoteId: req.params.id },
       orderBy: { changedAt: 'desc' }
     });
 
+    logger.info({ 
+      requestId, 
+      quoteId, 
+      userId, 
+      organizationId,
+      operation: 'get_quote_history_success',
+      historyCount: history.length
+    }, 'Quote history retrieved successfully');
+
     res.json({
       success: true,
       data: history
     });
   } catch (error) {
+    logger.error({ 
+      requestId, 
+      quoteId, 
+      userId, 
+      organizationId,
+      operation: 'get_quote_history_error',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }, 'Failed to fetch quote history');
     res.status(500).json({
       success: false,
       message: 'Failed to fetch quote history'
@@ -357,15 +439,37 @@ router.put(
     body('statusChangeReason').optional().isString().withMessage('Status change reason must be string')
   ]),
   async (req: AuthRequest, res): Promise<void> => {
-    try {
-      const { status, statusChangeReason } = req.body;
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const quoteId = req.params.id;
+    const userId = (req as AuthRequest).user!.userId;
+    const organizationId = (req as AuthRequest).user!.organizationId;
+    const { status, statusChangeReason } = req.body;
 
+    logger.info({ 
+      requestId, 
+      quoteId, 
+      userId, 
+      organizationId,
+      operation: 'update_quote_status',
+      newStatus: status,
+      reason: statusChangeReason,
+      ip: req.ip
+    }, 'Updating quote status');
+
+    try {
       // Get current quote for status history
       const currentQuote = await prisma.quote.findUnique({
         where: { id: req.params.id }
       });
 
       if (!currentQuote) {
+        logger.warn({ 
+          requestId, 
+          quoteId, 
+          userId, 
+          organizationId,
+          operation: 'update_quote_status_not_found'
+        }, 'Quote status update failed - quote not found');
         res.status(404).json({
           success: false,
           message: 'Quote not found'
@@ -401,18 +505,55 @@ router.put(
         return updatedQuote;
       });
 
+      logger.info({ 
+        requestId, 
+        quoteId, 
+        userId, 
+        organizationId,
+        operation: 'update_quote_status_success',
+        transition: {
+          from: currentQuote.status,
+          to: status,
+          reason: statusChangeReason
+        },
+        quote: {
+          quoteNumber: currentQuote.quoteNumber,
+          type: currentQuote.type
+        }
+      }, 'Quote status updated successfully');
+
       res.json({
         success: true,
         data: result
       });
     } catch (error) {
       if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2025') {
+        logger.warn({ 
+          requestId, 
+          quoteId, 
+          userId, 
+          organizationId,
+          operation: 'update_quote_status_not_found_transaction',
+          errorCode: error.code
+        }, 'Quote status update failed - quote not found in transaction');
         res.status(404).json({
           success: false,
           message: 'Quote not found'
         });
         return;
       }
+      logger.error({ 
+        requestId, 
+        quoteId, 
+        userId, 
+        organizationId,
+        operation: 'update_quote_status_error',
+        attemptedStatus: status,
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      }, 'Failed to update quote status');
       res.status(500).json({
         success: false,
         message: 'Failed to update quote'
@@ -423,10 +564,32 @@ router.put(
 
 // Delete quote
 router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const quoteId = req.params.id;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+
+  logger.info({ 
+    requestId, 
+    quoteId, 
+    userId, 
+    organizationId,
+    operation: 'delete_quote',
+    ip: req.ip
+  }, 'Deleting quote');
+
   try {
     await prisma.quote.delete({
       where: { id: req.params.id }
     });
+
+    logger.info({ 
+      requestId, 
+      quoteId, 
+      userId, 
+      organizationId,
+      operation: 'delete_quote_success'
+    }, 'Quote deleted successfully');
 
     res.json({
       success: true,
@@ -434,12 +597,31 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
     });
   } catch (error) {
     if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2025') {
+      logger.warn({ 
+        requestId, 
+        quoteId, 
+        userId, 
+        organizationId,
+        operation: 'delete_quote_not_found',
+        errorCode: error.code
+      }, 'Quote deletion failed - quote not found');
       res.status(404).json({
         success: false,
         message: 'Quote not found'
       });
       return;
     }
+    logger.error({ 
+      requestId, 
+      quoteId, 
+      userId, 
+      organizationId,
+      operation: 'delete_quote_error',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }, 'Failed to delete quote');
     res.status(500).json({
       success: false,
       message: 'Failed to delete quote'
@@ -645,9 +827,36 @@ router.post('/calculate', authenticate, validate([
   body('type').isIn(['AUTO', 'HOME', 'LIFE', 'HEALTH', 'BUSINESS']).withMessage('Invalid policy type'),
   body('coverageAmount').isNumeric().withMessage('Coverage amount must be numeric')
 ]), async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+  const { type, coverageAmount } = req.body;
+
+  logger.info({ 
+    requestId, 
+    userId, 
+    organizationId,
+    operation: 'calculate_premium',
+    type,
+    coverageAmount,
+    ip: req.ip
+  }, 'Calculating premium for quote');
+
   try {
-    const { type, coverageAmount } = req.body;
     const premium = calculatePremium(parseFloat(coverageAmount), type);
+
+    logger.info({ 
+      requestId, 
+      userId, 
+      organizationId,
+      operation: 'calculate_premium_success',
+      calculation: {
+        type,
+        coverageAmount: parseFloat(coverageAmount),
+        premium,
+        monthlyPremium: (premium / 12).toFixed(2)
+      }
+    }, 'Premium calculated successfully');
 
     res.json({
       success: true,
@@ -660,6 +869,18 @@ router.post('/calculate', authenticate, validate([
       message: 'Premium calculated successfully'
     });
   } catch (error) {
+    logger.error({ 
+      requestId, 
+      userId, 
+      organizationId,
+      operation: 'calculate_premium_error',
+      type,
+      coverageAmount,
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }, 'Failed to calculate premium');
     res.status(500).json({
       success: false,
       message: 'Failed to calculate premium'
@@ -669,6 +890,19 @@ router.post('/calculate', authenticate, validate([
 
 // Get my quotes (user-scoped endpoint)
 router.get('/my/quotes', authenticate, async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+
+  logger.info({ 
+    requestId, 
+    userId, 
+    organizationId,
+    operation: 'get_my_quotes',
+    filters: req.query,
+    ip: req.ip
+  }, 'Fetching user-scoped quotes');
+
   try {
     const { status, page = '1', limit = '50' } = req.query;
     
@@ -683,6 +917,7 @@ router.get('/my/quotes', authenticate, async (req: AuthRequest, res): Promise<vo
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
+    const startTime = Date.now();
     const [quotes, total] = await Promise.all([
       prisma.quote.findMany({
         where,
@@ -692,6 +927,20 @@ router.get('/my/quotes', authenticate, async (req: AuthRequest, res): Promise<vo
       }),
       prisma.quote.count({ where })
     ]);
+    const queryDuration = Date.now() - startTime;
+
+    logger.info({ 
+      requestId, 
+      userId, 
+      organizationId,
+      operation: 'get_my_quotes_success',
+      results: {
+        count: quotes.length,
+        total,
+        page: pageNum
+      },
+      performance: { queryDuration }
+    }, 'User quotes fetched successfully');
 
     res.json({
       success: true,
@@ -704,6 +953,16 @@ router.get('/my/quotes', authenticate, async (req: AuthRequest, res): Promise<vo
       }
     });
   } catch (error) {
+    logger.error({ 
+      requestId, 
+      userId, 
+      organizationId,
+      operation: 'get_my_quotes_error',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }, 'Failed to fetch user quotes');
     res.status(500).json({
       success: false,
       message: 'Failed to fetch your quotes'
@@ -713,6 +972,18 @@ router.get('/my/quotes', authenticate, async (req: AuthRequest, res): Promise<vo
 
 // Expire old quotes (utility endpoint)
 router.post('/expire-old', authenticate, async (req: AuthRequest, res): Promise<void> => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
+
+  logger.info({ 
+    requestId, 
+    userId, 
+    organizationId,
+    operation: 'expire_old_quotes',
+    ip: req.ip
+  }, 'Expiring old active quotes');
+
   try {
     const now = new Date();
     
@@ -725,6 +996,15 @@ router.post('/expire-old', authenticate, async (req: AuthRequest, res): Promise<
         status: 'EXPIRED'
       }
     });
+
+    logger.info({ 
+      requestId, 
+      userId, 
+      organizationId,
+      operation: 'expire_old_quotes_success',
+      expiredCount: result.count,
+      timestamp: now
+    }, `Expired ${result.count} old quote(s)`);
 
     res.json({
       success: true,
