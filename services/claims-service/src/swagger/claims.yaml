@@ -114,7 +114,6 @@ paths:
               type: object
               required:
                 - policyId
-                - claimNumber
                 - incidentDate
                 - claimAmount
                 - description
@@ -127,7 +126,7 @@ paths:
                 claimNumber:
                   type: string
                   example: CLM-2024-001234
-                  description: Unique claim identifier
+                  description: (Auto-generated) Unique claim identifier - do not provide in request
                 incidentDate:
                   type: string
                   format: date-time

@@ -123,14 +123,13 @@ paths:
             schema:
               type: object
               required:
-                - quoteNumber
                 - type
                 - coverageAmount
               properties:
                 quoteNumber:
                   type: string
                   example: QUO-2025-001234
-                  description: Unique quote identifier
+                  description: (Auto-generated) Unique quote identifier - do not provide in request
                 type:
                   type: string
                   enum: [AUTO, HOME, LIFE, HEALTH, BUSINESS]

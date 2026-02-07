@@ -356,16 +356,18 @@ router.post(
   authenticate,
   validate([
     body('policyId').notEmpty().withMessage('Policy ID is required'),
-    body('claimNumber').notEmpty().withMessage('Claim number is required'),
     body('incidentDate').isISO8601().withMessage('Valid incident date required'),
     body('description').notEmpty().withMessage('Description is required'),
     body('claimAmount').isNumeric().withMessage('Claim amount must be numeric')
   ]),
   async (req: AuthRequest, res): Promise<void> => {
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const { policyId, claimNumber, claimAmount, description } = req.body;
+    const { policyId, claimAmount, description } = req.body;
     const userId = (req as AuthRequest).user!.userId;
     const organizationId = (req as AuthRequest).user!.organizationId;
+    
+    // Generate claim number server-side
+    const claimNumber = `CLM-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     
     logger.info({ 
       requestId, 

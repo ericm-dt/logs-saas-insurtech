@@ -64,9 +64,8 @@ class QuoteManagementBehavior(BaseAgentBehavior):
         # Agent discusses coverage options with customer, reviews their needs (3-6 seconds)
         time.sleep(random.uniform(3, 6))
         
-        # Step 2: Create the quote
+        # Step 2: Create the quote (quoteNumber generated server-side)
         quote_data = {
-            "quoteNumber": f"QUO-{datetime.now().strftime('%Y%m%d')}-{random.randint(10000, 99999)}",
             "type": selected_type,
             "coverageAmount": selected_coverage,
             "expiresAt": (datetime.now() + timedelta(days=30)).isoformat()

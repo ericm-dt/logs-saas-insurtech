@@ -125,7 +125,6 @@ paths:
             schema:
               type: object
               required:
-                - policyNumber
                 - type
                 - startDate
                 - endDate
@@ -135,7 +134,7 @@ paths:
                 policyNumber:
                   type: string
                   example: POL-2024-001234
-                  description: Unique policy identifier
+                  description: (Auto-generated) Unique policy identifier - do not provide in request
                 type:
                   type: string
                   enum: [AUTO, HOME, LIFE, HEALTH, BUSINESS]

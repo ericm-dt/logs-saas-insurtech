@@ -72,7 +72,6 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
         
         claim_data = {
             "policyId": policy['id'],
-            "claimNumber": f"CLM-{datetime.now().strftime('%Y%m%d')}-{random.randint(10000, 99999)}",
             "incidentDate": (datetime.now() - timedelta(days=random.randint(1, 30))).isoformat(),
             "claimAmount": random.randint(1000, 50000),
             "description": random.choice(claim_descriptions)

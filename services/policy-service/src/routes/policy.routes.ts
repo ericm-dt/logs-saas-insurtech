@@ -312,7 +312,6 @@ router.post(
   '/',
   authenticate,
   validate([
-    body('policyNumber').notEmpty().withMessage('Policy number is required'),
     body('type').isIn(['AUTO', 'HOME', 'LIFE', 'HEALTH', 'BUSINESS']).withMessage('Invalid policy type'),
     body('startDate').isISO8601().withMessage('Valid start date required'),
     body('endDate').isISO8601().withMessage('Valid end date required'),
@@ -321,9 +320,12 @@ router.post(
   ]),
   async (req: AuthRequest, res): Promise<void> => {
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const { policyNumber, type, premium, coverageAmount } = req.body;
+    const { type, premium, coverageAmount } = req.body;
     const userId = (req as AuthRequest).user!.userId;
     const organizationId = (req as AuthRequest).user!.organizationId;
+    
+    // Generate policy number server-side
+    const policyNumber = `POL-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     
     logger.info({ 
       requestId, 
