@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 from locust import task
 from behaviors.base import BaseAgentBehavior
 from utils import with_rotation
+from utils.helpers import select_by_age_probability
+from config import TARGET_CLAIM_AGE_MINUTES
 
 
 class ClaimsManagementBehavior(BaseAgentBehavior):
@@ -27,7 +29,7 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
     Tasks run sequentially per HttpUser instance - no concurrency issues.
     """
     
-    @task(5)
+    @task(4)
     @with_rotation
     def file_claim(self):
         """File a new claim on an active policy"""
@@ -59,7 +61,8 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
             response.success()
         
         # Agent discusses which policy applies, customer explains incident details, agent takes notes (5-10 seconds)
-        time.sleep(random.uniform(5, 10))
+        # Apply user's speed factor for realistic variance
+        time.sleep(random.uniform(5, 10) * self.user_speed_factor)
         
         # Step 2: File a claim on the policy
         claim_descriptions = [
@@ -92,7 +95,7 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
             response.success()
         
         # Agent reviews the filed claim confirmation and provides claim number to customer (2-4 seconds)
-        time.sleep(random.uniform(2, 4))
+        time.sleep(random.uniform(2, 4) * self.user_speed_factor)
         
         # Step 3: View the claim details
         self.client.get(
@@ -101,10 +104,10 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
             name="3. View Claim Details"
         )
     
-    @task(3)
+    @task(4)
     @with_rotation
     def process_claim(self):
-        """Find a submitted claim and process it through to approval/denial"""
+        """Probabilistically select a claim to process based on age (favors ~18 min old claims)"""
         if not self.token:
             return
         
@@ -113,10 +116,10 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
             "User-Agent": self.user_agent
         }
         
-        # Step 1: Find claims to process
+        # Step 1: Fetch claims and select probabilistically by age
         status_to_find = random.choice(['SUBMITTED', 'UNDER_REVIEW'])
         with self.client.get(
-            f"/api/v1/claims?status={status_to_find}&limit=20",
+            f"/api/v1/claims?status={status_to_find}&limit=50",
             headers=headers,
             catch_response=True,
             name="1. Find Claim to Process"
@@ -125,17 +128,27 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
                 response.failure(f"Failed to get claims: {response.status_code}")
                 return
             
-            claims = response.json().get("data", [])
-            response.success()  # Mark success even if empty
+            all_claims = response.json().get("data", [])
+            # Probabilistically select claims, favoring those around target age
+            # Recent claims have low chance, claims near 18 min have peak probability
+            # Apply user-specific speed factor: fast agents prefer younger claims, slow agents prefer older
+            claims = select_by_age_probability(
+                all_claims,
+                target_age_minutes=TARGET_CLAIM_AGE_MINUTES * self.user_speed_factor,
+                max_selections=1
+            )
+            
+            response.success()
             if not claims:
+                # Agent notes no suitable claims available right now
                 return
             
-            claim = random.choice(claims)
+            claim = claims[0]
             claim_id = claim['id']
             response.success()
         
         # Agent opens and reads claim details thoroughly (5-10 seconds)
-        time.sleep(random.uniform(5, 10))
+        time.sleep(random.uniform(5, 10) * self.user_speed_factor)
         
         # Step 2: Update to under_review (if not already)
         if status_to_find == 'SUBMITTED':
@@ -147,7 +160,7 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
             )
             
             # Agent reviews documentation, checks policy terms, analyzes photos/evidence (8-15 seconds)
-            time.sleep(random.uniform(8, 15))
+            time.sleep(random.uniform(8, 15) * self.user_speed_factor)
         
         # Step 3: Approve or deny the claim (80% approval rate)
         if random.random() < 0.8:
@@ -183,7 +196,7 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
             )
         
         # Agent writes notes and prepares communication to customer (2-4 seconds)
-        time.sleep(random.uniform(2, 4))
+        time.sleep(random.uniform(2, 4) * self.user_speed_factor)
         
         # Step 4: Check claim history
         self.client.get(
@@ -216,7 +229,7 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
                 claims = response.json().get("data", [])
                 if claims:
                     # Agent scans claims queue, reviewing amounts and dates (3-6 seconds)
-                    time.sleep(random.uniform(3, 6))
+                    time.sleep(random.uniform(3, 6) * self.user_speed_factor)
                     
                     # Step 2: View specific claim
                     claim = random.choice(claims)
@@ -227,7 +240,7 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
                     )
                     
                     # Agent reads full claim details and attached documentation (4-8 seconds)
-                    time.sleep(random.uniform(4, 8))
+                    time.sleep(random.uniform(4, 8) * self.user_speed_factor)
                     
                     # Step 3: View claim history
                     self.client.get(

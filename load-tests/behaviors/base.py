@@ -7,6 +7,7 @@ import logging
 from locust import TaskSet
 from config import USERS, MIN_TASKS_BEFORE_ROTATION, MAX_TASKS_BEFORE_ROTATION
 from utils import get_user_group, get_user_agent
+from utils.helpers import get_user_speed_factor
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,7 @@ class BaseAgentBehavior(TaskSet):
                 "password": "password123"
             }
             self.organization_id = "default-org"
+            user_id = "default-user-id"
         else:
             # Pick a random user for this entire session (user variety across concurrent HttpUser instances)
             user = random.choice(USERS)
@@ -49,13 +51,20 @@ class BaseAgentBehavior(TaskSet):
                 "password": user["password"]
             }
             self.organization_id = user.get("organizationId", "unknown-org")
+            user_id = user.get("id", user["email"])  # Prefer ID, fallback to email
         
         # Determine user group (A or B) based on organization ID - consistent across all tasks
         # All users in the same organization will be in the same group
         self.user_group = get_user_group(self.organization_id)
         self.user_agent = get_user_agent(self.user_group)
         
-        logger.info(f"User {credentials['email']} (org: {self.organization_id}) assigned to Group {self.user_group}")
+        # Calculate user's consistent speed factor (0.7-1.3x) for realistic agent personality
+        # Use user ID (more stable than email) for deterministic speed calculation
+        self.user_id = user_id
+        self.user_email = credentials['email']
+        self.user_speed_factor = get_user_speed_factor(self.user_id)
+        
+        logger.info(f"User {credentials['email']} (org: {self.organization_id}) assigned to Group {self.user_group}, speed factor: {self.user_speed_factor:.2f}x")
         
         with self.client.post(
             "/api/v1/auth/login",

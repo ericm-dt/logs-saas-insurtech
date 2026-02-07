@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 from locust import task
 from behaviors.base import BaseAgentBehavior
 from utils import with_rotation
+from utils.helpers import select_by_age_probability
+from config import TARGET_QUOTE_AGE_MINUTES, TARGET_POLICY_AGE_MINUTES
 
 
 class QuoteManagementBehavior(BaseAgentBehavior):
@@ -27,7 +29,7 @@ class QuoteManagementBehavior(BaseAgentBehavior):
     Tasks run sequentially (not concurrently) so no race conditions on self.token.
     """
     
-    @task(5)
+    @task(4)
     @with_rotation
     def create_quote(self):
         """Create a new quote for a customer"""
@@ -62,7 +64,8 @@ class QuoteManagementBehavior(BaseAgentBehavior):
             response.success()
         
         # Agent discusses coverage options with customer, reviews their needs (3-6 seconds)
-        time.sleep(random.uniform(3, 6))
+        # Apply user's speed factor for realistic variance
+        time.sleep(random.uniform(3, 6) * self.user_speed_factor)
         
         # Step 2: Create the quote (quoteNumber generated server-side)
         quote_data = {
@@ -86,7 +89,8 @@ class QuoteManagementBehavior(BaseAgentBehavior):
                 return
         
         # Agent and customer review quote details together, discuss terms (4-8 seconds)
-        time.sleep(random.uniform(4, 8))
+        # Apply user's speed factor for realistic variance
+        time.sleep(random.uniform(4, 8) * self.user_speed_factor)
         
         # Step 3: View the quote details
         self.client.get(
@@ -95,10 +99,10 @@ class QuoteManagementBehavior(BaseAgentBehavior):
             name="3. View Quote Details"
         )
     
-    @task(3)
+    @task(4)
     @with_rotation
     def convert_quote_to_policy(self):
-        """Find an active quote and convert it to a policy"""
+        """Probabilistically select a quote to convert based on age (favors ~12 min old quotes)"""
         if not self.token:
             return
         
@@ -107,9 +111,9 @@ class QuoteManagementBehavior(BaseAgentBehavior):
             "User-Agent": self.user_agent
         }
         
-        # Step 1: Find active quotes
+        # Step 1: Fetch active quotes and select probabilistically by age
         with self.client.get(
-            "/api/v1/quotes?status=ACTIVE&limit=20",
+            "/api/v1/quotes?status=ACTIVE&limit=50",
             headers=headers,
             catch_response=True,
             name="1. Find Active Quote"
@@ -118,17 +122,27 @@ class QuoteManagementBehavior(BaseAgentBehavior):
                 response.failure("Failed to get quotes")
                 return
             
-            quotes = response.json().get("data", [])
+            all_quotes = response.json().get("data", [])
+            # Probabilistically select quotes, favoring those around target age
+            # Recent quotes have low (but non-zero) chance, very old quotes also have lower chance
+            # Apply user-specific speed factor: fast agents prefer younger quotes, slow agents prefer older
+            quotes = select_by_age_probability(
+                all_quotes, 
+                target_age_minutes=TARGET_QUOTE_AGE_MINUTES * self.user_speed_factor,
+                max_selections=1
+            )
+            
             if not quotes:
                 response.success()
+                # Agent notes no suitable quotes available right now
                 return
             
-            quote = random.choice(quotes)
+            quote = quotes[0]  # select_by_age_probability returns a list
             quote_id = quote["id"]
             response.success()
         
         # Customer confirms they want to proceed, agent prepares conversion (3-7 seconds)
-        time.sleep(random.uniform(3, 7))
+        time.sleep(random.uniform(3, 7) * self.user_speed_factor)
         
         # Step 2: Convert to policy
         with self.client.post(
@@ -142,7 +156,7 @@ class QuoteManagementBehavior(BaseAgentBehavior):
                 response.success()
                 
                 # Agent reviews policy confirmation with customer, explains next steps (3-6 seconds)
-                time.sleep(random.uniform(3, 6))
+                time.sleep(random.uniform(3, 6) * self.user_speed_factor)
                 
                 # Step 3: View the new policy
                 self.client.get(
@@ -188,7 +202,7 @@ class QuoteManagementBehavior(BaseAgentBehavior):
                 quotes = response.json().get("data", [])
                 if quotes:
                     # Agent scans through the quote list, comparing options (3-7 seconds)
-                    time.sleep(random.uniform(3, 7))
+                    time.sleep(random.uniform(3, 7) * self.user_speed_factor)
                     
                     # Step 2: View a specific quote
                     quote = random.choice(quotes)
@@ -199,7 +213,7 @@ class QuoteManagementBehavior(BaseAgentBehavior):
                     )
                     
                     # Agent thoroughly reviews all quote details, coverage amounts, terms (4-8 seconds)
-                    time.sleep(random.uniform(4, 8))
+                    time.sleep(random.uniform(4, 8) * self.user_speed_factor)
                     
                     # Step 3: Check quote history
                     self.client.get(
@@ -212,7 +226,7 @@ class QuoteManagementBehavior(BaseAgentBehavior):
     @task(2)
     @with_rotation
     def update_policy_status(self):
-        """Find a policy and update its status"""
+        """Probabilistically select a policy to update based on age (favors ~30 min old policies)"""
         if not self.token:
             return
         
@@ -221,9 +235,9 @@ class QuoteManagementBehavior(BaseAgentBehavior):
             "User-Agent": self.user_agent
         }
         
-        # Step 1: Find policies to update
+        # Step 1: Fetch policies and select probabilistically by age
         status_filter = random.choice(["ACTIVE", "EXPIRED", ""])
-        params = [f"page={random.randint(1, 2)}", "limit=20"]
+        params = [f"page={random.randint(1, 2)}", "limit=50"]
         if status_filter:
             params.append(f"status={status_filter}")
         
@@ -238,15 +252,24 @@ class QuoteManagementBehavior(BaseAgentBehavior):
                 response.failure(f"Failed to get policies: {response.status_code}")
                 return
             
-            policies = response.json().get("data", [])
-            response.success()  # Mark success even if empty
+            all_policies = response.json().get("data", [])
+            # Probabilistically select policies, favoring those around target age
+            # Apply user-specific speed factor: fast agents prefer younger policies, slow agents prefer older
+            policies = select_by_age_probability(
+                all_policies,
+                target_age_minutes=TARGET_POLICY_AGE_MINUTES * self.user_speed_factor,
+                max_selections=1
+            )
+            
+            response.success()
             if not policies:
+                # Agent notes no suitable policies available right now
                 return
             
             # Agent reviews policy list looking for target policy (2-5 seconds)
-            time.sleep(random.uniform(2, 5))
+            time.sleep(random.uniform(2, 5) * self.user_speed_factor)
             
-            policy = random.choice(policies)
+            policy = policies[0]
             response.success()
         
         # Step 2: View specific policy
@@ -257,7 +280,7 @@ class QuoteManagementBehavior(BaseAgentBehavior):
         )
         
         # Agent reads policy information and discusses with customer (5-9 seconds)
-        time.sleep(random.uniform(5, 9))
+        time.sleep(random.uniform(5, 9) * self.user_speed_factor)
         
         # Step 3: Update policy status
         new_status = random.choice(["ACTIVE", "CANCELLED"])
