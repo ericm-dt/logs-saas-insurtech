@@ -36,11 +36,17 @@ class QuoteManagementBehavior(BaseAgentBehavior):
         if not self.token:
             return
         
-        policy_types = ["AUTO", "HOME", "LIFE", "HEALTH", "BUSINESS"]
-        coverage_amounts = [25000, 50000, 100000, 250000, 500000, 1000000]
+        # Realistic coverage amounts vary by insurance type
+        coverage_by_type = {
+            "AUTO": [25000, 50000, 100000, 250000, 500000],  # Liability limits
+            "HOME": [200000, 300000, 400000, 500000, 750000, 1000000],  # Property value
+            "LIFE": [100000, 250000, 500000, 1000000, 2000000, 3000000],  # Death benefit
+            "HEALTH": [1000, 2500, 5000, 10000, 15000],  # Annual deductible
+            "BUSINESS": [500000, 1000000, 2000000, 3000000, 5000000]  # Liability coverage
+        }
         
-        selected_type = random.choice(policy_types)
-        selected_coverage = random.choice(coverage_amounts)
+        selected_type = random.choice(list(coverage_by_type.keys()))
+        selected_coverage = random.choice(coverage_by_type[selected_type])
         
         # Step 1: Calculate premium first (realistic agent workflow)
         headers = {

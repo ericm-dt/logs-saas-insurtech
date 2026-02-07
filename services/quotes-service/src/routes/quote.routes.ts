@@ -26,29 +26,61 @@ const validate = (validations: ValidationChain[]) => {
   };
 };
 
-// Calculate premium (simple example - 1.5% of coverage)
+// Calculate premium with realistic rates by insurance type
 function calculatePremium(coverageAmount: number, type: string): number {
-  const baseRate = 0.015; // 1.5%
-  const typeMultipliers: Record<string, number> = {
-    AUTO: 1.0,
-    HOME: 1.2,
-    LIFE: 0.8,
-    HEALTH: 1.5,
-    BUSINESS: 2.0
-  };
+  let premium: number;
+  let formula: string;
   
-  const multiplier = typeMultipliers[type] || 1.0;
-  const premium = parseFloat((coverageAmount * baseRate * multiplier).toFixed(2));
+  switch (type) {
+    case 'AUTO':
+      // Auto: $500 base + 0.3% of coverage (typical: $800-$2,000/year)
+      premium = 500 + (coverageAmount * 0.003);
+      formula = `500 + (${coverageAmount} * 0.003)`;
+      break;
+    
+    case 'HOME':
+      // Home: 0.4% of property value (typical: $800-$4,000/year)
+      premium = coverageAmount * 0.004;
+      formula = `${coverageAmount} * 0.004`;
+      break;
+    
+    case 'LIFE':
+      // Life (term): 0.1% of coverage (typical: $100-$3,000/year for term life)
+      premium = coverageAmount * 0.001;
+      formula = `${coverageAmount} * 0.001`;
+      break;
+    
+    case 'HEALTH':
+      // Health: Flat rate $6,000-$8,000/year (deductible affects out-of-pocket, not premium)
+      // Lower deductible = higher premium
+      const healthBase = 8000;
+      const deductibleDiscount = (coverageAmount / 15000) * 2000; // Max $2k discount for high deductible
+      premium = healthBase - deductibleDiscount;
+      formula = `${healthBase} - ((${coverageAmount} / 15000) * 2000)`;
+      break;
+    
+    case 'BUSINESS':
+      // Business liability: 1.0% of coverage (typical: $5,000-$50,000/year)
+      premium = coverageAmount * 0.01;
+      formula = `${coverageAmount} * 0.01`;
+      break;
+    
+    default:
+      // Fallback: 1.5% of coverage
+      premium = coverageAmount * 0.015;
+      formula = `${coverageAmount} * 0.015`;
+  }
+  
+  premium = parseFloat(premium.toFixed(2));
   
   logger.debug({ 
     coverageAmount, 
     type, 
-    baseRate, 
-    multiplier, 
     calculatedPremium: premium,
     operation: 'quote.calculate_premium',
-    formula: `${coverageAmount} * ${baseRate} * ${multiplier}`,
-    monthlyPremium: (premium / 12).toFixed(2)
+    formula,
+    monthlyPremium: (premium / 12).toFixed(2),
+    annualPremium: premium
   }, 'Premium calculated for quote');
   
   return premium;
