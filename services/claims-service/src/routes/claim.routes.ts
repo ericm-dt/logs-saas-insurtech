@@ -673,6 +673,10 @@ router.put(
         approvedAmount,
         claimAmount: currentClaim.claimAmount,
         operation: 'update_claim_success',
+        claim: {
+          claimNumber: currentClaim.claimNumber,
+          policyId: currentClaim.policyId
+        },
         statusHistory: {
           from: currentClaim.status,
           to: status,
@@ -1082,6 +1086,26 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
   }, 'Deleting claim');
 
   try {
+    // Fetch claim first to log business identifier before deletion
+    const claim = await prisma.claim.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!claim) {
+      logger.warn({ 
+        requestId, 
+        claimId, 
+        userId, 
+        organizationId,
+        operation: 'delete_claim_not_found'
+      }, 'Claim deletion failed - claim not found');
+      res.status(404).json({
+        success: false,
+        message: 'Claim not found'
+      });
+      return;
+    }
+
     await prisma.claim.delete({
       where: { id: req.params.id }
     });
@@ -1091,7 +1115,12 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
       claimId, 
       userId, 
       organizationId,
-      operation: 'delete_claim_success'
+      operation: 'delete_claim_success',
+      claim: {
+        claimNumber: claim.claimNumber,
+        status: claim.status,
+        policyId: claim.policyId
+      }
     }, 'Claim deleted successfully');
 
     res.json({

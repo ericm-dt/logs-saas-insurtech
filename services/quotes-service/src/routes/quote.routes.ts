@@ -581,6 +581,26 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
   }, 'Deleting quote');
 
   try {
+    // Fetch quote first to log business identifier before deletion
+    const quote = await prisma.quote.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!quote) {
+      logger.warn({ 
+        requestId, 
+        quoteId, 
+        userId, 
+        organizationId,
+        operation: 'delete_quote_not_found'
+      }, 'Quote deletion failed - quote not found');
+      res.status(404).json({
+        success: false,
+        message: 'Quote not found'
+      });
+      return;
+    }
+
     await prisma.quote.delete({
       where: { id: req.params.id }
     });
@@ -590,7 +610,12 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
       quoteId, 
       userId, 
       organizationId,
-      operation: 'delete_quote_success'
+      operation: 'delete_quote_success',
+      quote: {
+        quoteNumber: quote.quoteNumber,
+        type: quote.type,
+        status: quote.status
+      }
     }, 'Quote deleted successfully');
 
     res.json({

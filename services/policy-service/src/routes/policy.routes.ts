@@ -850,6 +850,26 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
   }, 'Deleting policy');
 
   try {
+    // Fetch policy first to log business identifier before deletion
+    const policy = await prisma.policy.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!policy) {
+      logger.warn({ 
+        requestId, 
+        policyId, 
+        userId, 
+        organizationId,
+        operation: 'delete_policy_not_found'
+      }, 'Policy deletion failed - policy not found');
+      res.status(404).json({
+        success: false,
+        message: 'Policy not found'
+      });
+      return;
+    }
+
     await prisma.policy.delete({
       where: { id: req.params.id }
     });
@@ -859,7 +879,12 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
       policyId, 
       userId, 
       organizationId,
-      operation: 'delete_policy_success'
+      operation: 'delete_policy_success',
+      policy: {
+        policyNumber: policy.policyNumber,
+        type: policy.type,
+        status: policy.status
+      }
     }, 'Policy deleted successfully');
 
     res.json({
