@@ -112,11 +112,6 @@ router.post('/register', async (req: Request, res: Response) => {
     
     logger.info({ 
       requestId, 
-      userId: result.user.id, 
-      email, 
-      organizationId,
-      role,
-      orgRole,
       duration,
       hasToken: !!result.token,
       operation: 'user.register.success',
@@ -173,11 +168,6 @@ router.post('/login', async (req: Request, res: Response) => {
     
     logger.info({ 
       requestId, 
-      userId: result.user.id, 
-      email, 
-      organizationId: result.user.organizationId,
-      role: result.user.role,
-      orgRole: result.user.orgRole,
       duration,
       ip: req.ip,
       operation: 'auth.login.success',

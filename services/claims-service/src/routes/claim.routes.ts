@@ -100,8 +100,10 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
 
   logger.info({ 
     requestId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'claim.list',
     filters: req.query,
     ip: req.ip
@@ -171,8 +173,10 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
 
     logger.info({ 
       requestId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'claim.list.success',
       results: {
         count: claims.length,
@@ -206,8 +210,10 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
   } catch (error) {
     logger.error({ 
       requestId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'claim.list.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -231,8 +237,10 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
   logger.info({ 
     requestId, 
     claimId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'claim.get',
     ip: req.ip
   }, 'Fetching claim by ID');
@@ -246,8 +254,10 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
       logger.warn({ 
         requestId, 
         claimId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'claim.get.not_found'
       }, 'Claim not found by ID');
       res.status(404).json({
@@ -260,8 +270,10 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
     logger.info({ 
       requestId, 
       claimId: claim.id, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'claim.get.success',
       claim: {
         id: claim.id,
@@ -281,8 +293,10 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
     logger.error({ 
       requestId, 
       claimId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'claim.get.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -306,8 +320,10 @@ router.get('/:id/history', authenticate, param('id').isUUID(), async (req: AuthR
   logger.info({ 
     requestId, 
     claimId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'claim.get_history',
     ip: req.ip
   }, 'Fetching claim status history');
@@ -321,8 +337,10 @@ router.get('/:id/history', authenticate, param('id').isUUID(), async (req: AuthR
     logger.info({ 
       requestId, 
       claimId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'claim.get_history.success',
       historyCount: history.length,
       hasChanges: history.length > 0
@@ -336,8 +354,10 @@ router.get('/:id/history', authenticate, param('id').isUUID(), async (req: AuthR
     logger.error({ 
       requestId, 
       claimId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'claim.get_history.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -372,8 +392,10 @@ router.post(
     
     logger.info({ 
       requestId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'claim.create',
       claim: {
         policyId,
@@ -403,8 +425,10 @@ router.post(
       if (!policyValidation.valid) {
         logger.warn({ 
           requestId, 
-          userId, 
-          organizationId,
+          user: {
+            id: userId,
+            organizationId
+          },
           policyId, 
           claimNumber,
           operation: 'claim.create.invalid_policy',
@@ -453,8 +477,10 @@ router.post(
       logger.info({ 
         requestId, 
         claimId: claim.id, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         policyId, 
         claimNumber, 
         claimAmount,
@@ -483,8 +509,10 @@ router.post(
       if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002') {
         logger.warn({ 
           requestId, 
-          userId, 
-          organizationId,
+          user: {
+            id: userId,
+            organizationId
+          },
           claimNumber,
           operation: 'claim.create.duplicate',
           errorCode: error.code
@@ -497,8 +525,10 @@ router.post(
       }
       logger.error({ 
         requestId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'claim.create.error',
         claim: {
           claimNumber,
@@ -583,8 +613,10 @@ router.put(
         logger.warn({ 
           requestId, 
           claimId, 
-          userId,
-          organizationId: currentClaim.organizationId,
+          user: {
+            id: userId,
+            organizationId: currentClaim.organizationId
+          },
           currentStatus: currentClaim.status, 
           requestedStatus: status,
           validTransitions: validTransitions[currentClaim.status],
@@ -663,8 +695,10 @@ router.put(
       logger.info({ 
         requestId, 
         claimId, 
-        userId,
-        organizationId: currentClaim.organizationId,
+        user: {
+          id: userId,
+          organizationId: currentClaim.organizationId
+        },
         oldStatus: currentClaim.status, 
         newStatus: status,
         approvedAmount,
@@ -742,8 +776,10 @@ router.post('/:id/approve', authenticate, param('id').isUUID(), validate([
   logger.info({ 
     requestId, 
     claimId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'claim.approve',
     approvedAmount,
     reason,
@@ -759,8 +795,10 @@ router.post('/:id/approve', authenticate, param('id').isUUID(), validate([
       logger.warn({ 
         requestId, 
         claimId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'claim.approve.not_found'
       }, 'Claim approval failed - claim not found');
       res.status(404).json({
@@ -774,8 +812,10 @@ router.post('/:id/approve', authenticate, param('id').isUUID(), validate([
       logger.warn({ 
         requestId, 
         claimId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'claim.approve.invalid_status',
         currentStatus: currentClaim.status
       }, 'Claim approval failed - invalid status (must be UNDER_REVIEW)');
@@ -815,8 +855,10 @@ router.post('/:id/approve', authenticate, param('id').isUUID(), validate([
     logger.info({ 
       requestId, 
       claimId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'claim.approve.success',
       workflow: {
         from: currentClaim.status,
@@ -845,8 +887,10 @@ router.post('/:id/approve', authenticate, param('id').isUUID(), validate([
     logger.error({ 
       requestId, 
       claimId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'claim.approve.error',
       approvedAmount,
       error: {
@@ -874,8 +918,10 @@ router.post('/:id/deny', authenticate, param('id').isUUID(), validate([
   logger.info({ 
     requestId, 
     claimId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'claim.deny',
     reason,
     ip: req.ip
@@ -890,8 +936,10 @@ router.post('/:id/deny', authenticate, param('id').isUUID(), validate([
       logger.warn({ 
         requestId, 
         claimId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'claim.deny.not_found'
       }, 'Claim denial failed - claim not found');
       res.status(404).json({
@@ -905,8 +953,10 @@ router.post('/:id/deny', authenticate, param('id').isUUID(), validate([
       logger.warn({ 
         requestId, 
         claimId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'claim.deny.invalid_status',
         currentStatus: currentClaim.status
       }, 'Claim denial failed - invalid status (must be SUBMITTED or UNDER_REVIEW)');
@@ -944,8 +994,10 @@ router.post('/:id/deny', authenticate, param('id').isUUID(), validate([
     logger.info({ 
       requestId, 
       claimId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'claim.deny.success',
       workflow: {
         from: currentClaim.status,
@@ -970,8 +1022,10 @@ router.post('/:id/deny', authenticate, param('id').isUUID(), validate([
     logger.error({ 
       requestId, 
       claimId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'claim.deny.error',
       reason,
       error: {
@@ -994,8 +1048,10 @@ router.get('/my/claims', authenticate, async (req: AuthRequest, res): Promise<vo
 
   logger.info({ 
     requestId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'claim.list_my',
     filters: req.query,
     ip: req.ip
@@ -1029,8 +1085,10 @@ router.get('/my/claims', authenticate, async (req: AuthRequest, res): Promise<vo
 
     logger.info({ 
       requestId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'claim.list_my.success',
       results: {
         count: claims.length,
@@ -1054,8 +1112,10 @@ router.get('/my/claims', authenticate, async (req: AuthRequest, res): Promise<vo
   } catch (error) {
     logger.error({ 
       requestId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'claim.list_my.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -1079,8 +1139,10 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
   logger.info({ 
     requestId, 
     claimId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'claim.delete',
     ip: req.ip
   }, 'Deleting claim');
@@ -1095,8 +1157,10 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
       logger.warn({ 
         requestId, 
         claimId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'claim.delete.not_found'
       }, 'Claim deletion failed - claim not found');
       res.status(404).json({
@@ -1113,8 +1177,10 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
     logger.info({ 
       requestId, 
       claimId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'claim.delete.success',
       claim: {
         id: claimId,
@@ -1133,8 +1199,10 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
       logger.warn({ 
         requestId, 
         claimId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'claim.delete.not_found',
         errorCode: error.code
       }, 'Claim deletion failed - claim not found');
@@ -1147,8 +1215,10 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
     logger.error({ 
       requestId, 
       claimId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'claim.delete.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',

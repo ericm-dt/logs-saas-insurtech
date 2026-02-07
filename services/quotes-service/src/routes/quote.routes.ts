@@ -126,8 +126,10 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
     ]);
 
     logger.info({ 
-      organizationId: (req as AuthRequest).user!.organizationId,
-      userId: (req as AuthRequest).user!.userId,
+      user: {
+        id: (req as AuthRequest).user!.userId,
+        organizationId: (req as AuthRequest).user!.organizationId
+      },
       operation: 'quote.list',
       results: {
         quotesReturned: quotes.length,
@@ -180,8 +182,10 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
   logger.info({ 
     requestId, 
     quoteId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'quote.get',
     ip: req.ip
   }, 'Fetching quote by ID');
@@ -195,8 +199,10 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
       logger.warn({ 
         requestId, 
         quoteId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'quote.get.not_found'
       }, 'Quote not found by ID');
       res.status(404).json({
@@ -209,8 +215,10 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
     logger.info({ 
       requestId, 
       quoteId: quote.id, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'quote.get.success',
       quote: {
         id: quote.id,
@@ -231,8 +239,10 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
     logger.error({ 
       requestId, 
       quoteId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'quote.get.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -256,8 +266,10 @@ router.get('/:id/history', authenticate, param('id').isUUID(), async (req: AuthR
   logger.info({ 
     requestId, 
     quoteId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'quote.get_history',
     ip: req.ip
   }, 'Fetching quote status history');
@@ -271,8 +283,10 @@ router.get('/:id/history', authenticate, param('id').isUUID(), async (req: AuthR
     logger.info({ 
       requestId, 
       quoteId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'quote.get_history.success',
       historyCount: history.length
     }, 'Quote history retrieved successfully');
@@ -285,8 +299,10 @@ router.get('/:id/history', authenticate, param('id').isUUID(), async (req: AuthR
     logger.error({ 
       requestId, 
       quoteId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'quote.get_history.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -320,8 +336,10 @@ router.post(
     
     logger.info({ 
       requestId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'quote.create',
       quote: {
         quoteNumber,
@@ -358,8 +376,10 @@ router.post(
       logger.info({ 
         requestId, 
         quoteId: quote.id, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         quoteNumber, 
         type, 
         coverageAmount,
@@ -392,8 +412,10 @@ router.post(
       if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002') {
         logger.warn({ 
           requestId, 
-          userId, 
-          organizationId,
+          user: {
+            id: userId,
+            organizationId
+          },
           quoteNumber,
           operation: 'quote.create.duplicate',
           errorCode: error.code
@@ -406,8 +428,10 @@ router.post(
       }
       logger.error({ 
         requestId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'quote.create.error',
         quote: {
           quoteNumber,
@@ -447,8 +471,10 @@ router.put(
     logger.info({ 
       requestId, 
       quoteId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'quote.update_status',
       newStatus: status,
       reason: statusChangeReason,
@@ -465,8 +491,10 @@ router.put(
         logger.warn({ 
           requestId, 
           quoteId, 
-          userId, 
-          organizationId,
+          user: {
+            id: userId,
+            organizationId
+          },
           operation: 'quote.update_status.not_found'
         }, 'Quote status update failed - quote not found');
         res.status(404).json({
@@ -507,8 +535,10 @@ router.put(
       logger.info({ 
         requestId, 
         quoteId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'quote.update_status.success',
         transition: {
           from: currentQuote.status,
@@ -531,8 +561,10 @@ router.put(
         logger.warn({ 
           requestId, 
           quoteId, 
-          userId, 
-          organizationId,
+          user: {
+            id: userId,
+            organizationId
+          },
           operation: 'quote.update_status.not_found_transaction',
           errorCode: error.code
         }, 'Quote status update failed - quote not found in transaction');
@@ -545,8 +577,10 @@ router.put(
       logger.error({ 
         requestId, 
         quoteId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'quote.update_status.error',
         attemptedStatus: status,
         error: {
@@ -572,8 +606,10 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
   logger.info({ 
     requestId, 
     quoteId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'quote.delete',
     ip: req.ip
   }, 'Deleting quote');
@@ -588,8 +624,10 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
       logger.warn({ 
         requestId, 
         quoteId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'quote.delete.not_found'
       }, 'Quote deletion failed - quote not found');
       res.status(404).json({
@@ -606,8 +644,10 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
     logger.info({ 
       requestId, 
       quoteId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'quote.delete.success',
       quote: {
         id: quoteId,
@@ -626,8 +666,10 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
       logger.warn({ 
         requestId, 
         quoteId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'quote.delete.not_found',
         errorCode: error.code
       }, 'Quote deletion failed - quote not found');
@@ -640,8 +682,10 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
     logger.error({ 
       requestId, 
       quoteId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'quote.delete.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -663,8 +707,10 @@ router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: Auth
   logger.info({ 
     requestId, 
     quoteId, 
-    userId,
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'quote.convert_policy',
     ip: req.ip,
     userAgent: req.get('user-agent')
@@ -679,8 +725,10 @@ router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: Auth
       logger.warn({ 
         requestId, 
         quoteId, 
-        userId,
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'quote.convert_policy.not_found'
       }, 'Quote conversion failed - quote not found in database');
       res.status(404).json({
@@ -768,8 +816,10 @@ router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: Auth
         requestId, 
         quoteId: updatedQuote.id, 
         policyId: policyResponse.data.data.id,
-        userId,
-        organizationId: quote.organizationId,
+        user: {
+          id: userId,
+          organizationId: quote.organizationId
+        },
         policyNumber: policyResponse.data.data.policyNumber,
         premium: quote.premium,
         coverageAmount: quote.coverageAmount,
@@ -806,8 +856,10 @@ router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: Auth
       logger.error({ 
         requestId, 
         quoteId,
-        userId,
-        organizationId: quote.organizationId,
+        user: {
+          id: userId,
+          organizationId: quote.organizationId
+        },
         serviceUrl: POLICY_SERVICE_URL,
         operation: 'quote.convert_policy.service_error',
         service: 'policy-service',
@@ -833,8 +885,10 @@ router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: Auth
     logger.error({ 
       requestId, 
       quoteId, 
-      userId,
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'quote.convert_policy.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -861,8 +915,10 @@ router.post('/calculate', authenticate, validate([
 
   logger.info({ 
     requestId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'quote.calculate_premium',
     type,
     coverageAmount,
@@ -874,8 +930,10 @@ router.post('/calculate', authenticate, validate([
 
     logger.info({ 
       requestId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'quote.calculate_premium.success',
       calculation: {
         type,
@@ -898,8 +956,10 @@ router.post('/calculate', authenticate, validate([
   } catch (error) {
     logger.error({ 
       requestId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'quote.calculate_premium.error',
       type,
       coverageAmount,
@@ -923,8 +983,10 @@ router.get('/my/quotes', authenticate, async (req: AuthRequest, res): Promise<vo
 
   logger.info({ 
     requestId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'quote.list_my',
     filters: req.query,
     ip: req.ip
@@ -958,8 +1020,10 @@ router.get('/my/quotes', authenticate, async (req: AuthRequest, res): Promise<vo
 
     logger.info({ 
       requestId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'quote.list_my.success',
       results: {
         count: quotes.length,
@@ -982,8 +1046,10 @@ router.get('/my/quotes', authenticate, async (req: AuthRequest, res): Promise<vo
   } catch (error) {
     logger.error({ 
       requestId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'quote.list_my.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -1005,8 +1071,10 @@ router.post('/expire-old', authenticate, async (req: AuthRequest, res): Promise<
 
   logger.info({ 
     requestId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'quote.expire_old',
     ip: req.ip
   }, 'Expiring old active quotes');
@@ -1026,8 +1094,10 @@ router.post('/expire-old', authenticate, async (req: AuthRequest, res): Promise<
 
     logger.info({ 
       requestId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'quote.expire_old.success',
       expiredCount: result.count,
       timestamp: now
@@ -1041,8 +1111,10 @@ router.post('/expire-old', authenticate, async (req: AuthRequest, res): Promise<
   } catch (error) {
     logger.error({ 
       requestId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'quote.expire_old.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',

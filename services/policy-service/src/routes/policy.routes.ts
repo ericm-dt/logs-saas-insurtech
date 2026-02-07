@@ -33,8 +33,10 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
   
   logger.info({ 
     requestId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'policy.list',
     filters: {
       status: req.query.status || 'all',
@@ -123,8 +125,10 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
 
     logger.info({ 
       requestId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'policy.list.success',
       results: {
         count: policies.length,
@@ -158,8 +162,10 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
   } catch (error) {
     logger.error({ 
       requestId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'policy.list.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -188,8 +194,10 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
   logger.info({ 
     requestId, 
     policyId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'policy.get',
     ip: req.ip
   }, 'Fetching policy by ID');
@@ -203,8 +211,10 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
       logger.warn({ 
         requestId, 
         policyId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'policy.get.not_found'
       }, 'Policy not found by ID');
       res.status(404).json({
@@ -217,8 +227,10 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
     logger.info({ 
       requestId, 
       policyId: policy.id, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'policy.get.success',
       policy: {
         id: policy.id,
@@ -238,8 +250,10 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
     logger.error({ 
       requestId, 
       policyId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'policy.get.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -263,8 +277,10 @@ router.get('/:id/history', authenticate, param('id').isUUID(), async (req: AuthR
   logger.info({ 
     requestId, 
     policyId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'policy.get_history',
     ip: req.ip
   }, 'Fetching policy status history');
@@ -278,8 +294,10 @@ router.get('/:id/history', authenticate, param('id').isUUID(), async (req: AuthR
     logger.info({ 
       requestId, 
       policyId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'policy.get_history.success',
       historyCount: history.length,
       hasChanges: history.length > 0
@@ -293,8 +311,10 @@ router.get('/:id/history', authenticate, param('id').isUUID(), async (req: AuthR
     logger.error({ 
       requestId, 
       policyId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'policy.get_history.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -330,8 +350,10 @@ router.post(
     
     logger.info({ 
       requestId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'policy.create',
       policy: {
         policyNumber, 
@@ -365,8 +387,10 @@ router.post(
       logger.info({ 
         requestId, 
         policyId: policy.id, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'policy.create.success',
         policy: {
           id: policy.id,
@@ -394,8 +418,10 @@ router.post(
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         logger.warn({ 
           requestId, 
-          userId, 
-          organizationId,
+          user: {
+            id: userId,
+            organizationId
+          },
           operation: 'policy.create.duplicate',
           policyNumber,
           attemptedType: type,
@@ -409,8 +435,10 @@ router.post(
       }
       logger.error({ 
         requestId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'policy.create.error',
         policy: {
           policyNumber,
@@ -447,8 +475,10 @@ router.put(
     logger.info({ 
       requestId, 
       policyId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'policy.update',
       updates: { 
         status, 
@@ -476,8 +506,10 @@ router.put(
         logger.warn({ 
           requestId, 
           policyId, 
-          userId, 
-          organizationId,
+          user: {
+            id: userId,
+            organizationId
+          },
           operation: 'policy.update.not_found',
           attemptedUpdates: { status, premium, coverageAmount }
         }, 'Policy update failed - policy not found in organization');
@@ -522,8 +554,10 @@ router.put(
           logger.info({ 
             requestId, 
             policyId, 
-            userId,
-            organizationId: currentPolicy.organizationId,
+            user: {
+              id: userId,
+              organizationId: currentPolicy.organizationId
+            },
             operation: 'policy.update.status_transition',
             transition: {
               from: currentPolicy.status, 
@@ -546,8 +580,10 @@ router.put(
       logger.info({ 
         requestId, 
         policyId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'policy.update.success',
         changes: {
           statusChanged: status && status !== currentPolicy.status,
@@ -573,8 +609,10 @@ router.put(
         logger.warn({ 
           requestId, 
           policyId, 
-          userId,
-          organizationId,
+          user: {
+            id: userId,
+            organizationId
+          },
           operation: 'policy.update.not_found_transaction',
           errorCode: error.code
         }, 'Policy update failed - policy not found during transaction');
@@ -587,8 +625,10 @@ router.put(
       logger.error({ 
         requestId, 
         policyId, 
-        userId,
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'policy.update.error',
         attemptedChanges: { status, premium, coverageAmount, endDate: !!endDate },
         error: {
@@ -621,8 +661,10 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
   logger.info({ 
     requestId, 
     policyId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'policy.file_claim',
     claimAmount,
     incidentDate,
@@ -638,8 +680,10 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
       logger.warn({ 
         requestId, 
         policyId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'policy.file_claim.not_found'
       }, 'Cannot file claim - policy not found');
       res.status(404).json({
@@ -653,8 +697,10 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
       logger.warn({ 
         requestId, 
         policyId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         policyStatus: policy.status,
         operation: 'policy.file_claim.policy_inactive'
       }, 'Cannot file claim - policy is not active');
@@ -699,8 +745,10 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
         policyId, 
         claimId: claimResponse.data.data?.id,
         claimNumber,
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'policy.file_claim.success',
         claimAmount,
         performance: {
@@ -717,8 +765,10 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
       logger.error({ 
         requestId, 
         policyId, 
-        userId,
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         claimNumber,
         serviceUrl: CLAIMS_SERVICE_URL,
         operation: 'policy.file_claim.service_error',
@@ -737,8 +787,10 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
     logger.error({ 
       requestId, 
       policyId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'policy.file_claim.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -760,8 +812,10 @@ router.get('/my/policies', authenticate, async (req: AuthRequest, res): Promise<
 
   logger.info({ 
     requestId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'policy.list_my',
     filters: req.query,
     ip: req.ip
@@ -795,8 +849,10 @@ router.get('/my/policies', authenticate, async (req: AuthRequest, res): Promise<
 
     logger.info({ 
       requestId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'policy.list_my.success',
       results: {
         count: policies.length,
@@ -822,8 +878,10 @@ router.get('/my/policies', authenticate, async (req: AuthRequest, res): Promise<
   } catch (error) {
     logger.error({ 
       requestId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'policy.list_my.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -847,8 +905,10 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
   logger.info({ 
     requestId, 
     policyId, 
-    userId, 
-    organizationId,
+    user: {
+      id: userId,
+      organizationId
+    },
     operation: 'policy.delete',
     ip: req.ip
   }, 'Deleting policy');
@@ -863,8 +923,10 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
       logger.warn({ 
         requestId, 
         policyId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'policy.delete.not_found'
       }, 'Policy deletion failed - policy not found');
       res.status(404).json({
@@ -881,8 +943,10 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
     logger.info({ 
       requestId, 
       policyId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'policy.delete.success',
       policy: {
         id: policyId,
@@ -901,8 +965,10 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
       logger.warn({ 
         requestId, 
         policyId, 
-        userId, 
-        organizationId,
+        user: {
+          id: userId,
+          organizationId
+        },
         operation: 'policy.delete.not_found',
         errorCode: error.code
       }, 'Policy deletion failed - policy not found');
@@ -915,8 +981,10 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
     logger.error({ 
       requestId, 
       policyId, 
-      userId, 
-      organizationId,
+      user: {
+        id: userId,
+        organizationId
+      },
       operation: 'policy.delete.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',

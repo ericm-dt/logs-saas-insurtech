@@ -68,7 +68,9 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
 
   logger.info({ 
     requestId, 
-    userId,
+    user: {
+      id: userId
+    },
     operation: 'user.get',
     ip: req.ip
   }, 'Fetching user by ID');
@@ -98,7 +100,9 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
     if (!user) {
       logger.warn({ 
         requestId, 
-        userId,
+        user: {
+          id: userId
+        },
         operation: 'user.get.not_found'
       }, 'User not found');
       res.status(404).json({ success: false, message: 'User not found' });
@@ -107,7 +111,6 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
 
     logger.info({ 
       requestId, 
-      userId,
       operation: 'user.get.success',
       user: {
         id: userId,
@@ -121,7 +124,9 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     logger.error({ 
       requestId, 
-      userId,
+      user: {
+        id: userId
+      },
       operation: 'user.get.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -141,7 +146,9 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
 
   logger.info({ 
     requestId, 
-    userId,
+    user: {
+      id: userId
+    },
     operation: 'user.update',
     updates: { firstName, lastName, phone, city, state, country },
     ip: req.ip
@@ -179,10 +186,8 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
         updatedAt: true,
       }
     });
-
     logger.info({ 
       requestId, 
-      userId,
       operation: 'user.update.success',
       user: {
         id: userId,
@@ -196,7 +201,9 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     logger.error({ 
       requestId, 
-      userId,
+      user: {
+        id: userId
+      },
       operation: 'user.update.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -215,7 +222,9 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
 
   logger.info({ 
     requestId, 
-    userId,
+    user: {
+      id: userId
+    },
     operation: 'user.delete',
     ip: req.ip
   }, 'Deleting user');
@@ -227,7 +236,9 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
 
     logger.info({ 
       requestId, 
-      userId,
+      user: {
+        id: userId
+      },
       operation: 'user.delete.success'
     }, 'User deleted successfully');
 
@@ -235,7 +246,9 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     logger.error({ 
       requestId, 
-      userId,
+      user: {
+        id: userId
+      },
       operation: 'user.delete.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
