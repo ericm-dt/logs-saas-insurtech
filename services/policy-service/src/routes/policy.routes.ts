@@ -715,6 +715,8 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
       logger.error({ 
         requestId, 
         policyId, 
+        userId,
+        organizationId,
         claimNumber,
         serviceUrl: CLAIMS_SERVICE_URL,
         operation: 'file_claim_service_error',

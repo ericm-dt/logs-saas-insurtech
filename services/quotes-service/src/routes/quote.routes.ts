@@ -659,11 +659,13 @@ router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: Auth
   const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const quoteId = req.params.id;
   const userId = (req as AuthRequest).user!.userId;
+  const organizationId = (req as AuthRequest).user!.organizationId;
   
   logger.info({ 
     requestId, 
     quoteId, 
     userId,
+    organizationId,
     operation: 'convert_quote_to_policy',
     ip: req.ip,
     userAgent: req.get('user-agent')
@@ -679,6 +681,7 @@ router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: Auth
         requestId, 
         quoteId, 
         userId,
+        organizationId,
         operation: 'convert_quote_not_found'
       }, 'Quote conversion failed - quote not found in database');
       res.status(404).json({
@@ -804,6 +807,8 @@ router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: Auth
       logger.error({ 
         requestId, 
         quoteId,
+        userId,
+        organizationId: quote.organizationId,
         serviceUrl: POLICY_SERVICE_URL,
         operation: 'convert_quote_policy_service_error',
         service: 'policy-service',
@@ -830,6 +835,7 @@ router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: Auth
       requestId, 
       quoteId, 
       userId,
+      organizationId,
       operation: 'convert_quote_error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -1034,6 +1040,16 @@ router.post('/expire-old', authenticate, async (req: AuthRequest, res): Promise<
       message: `Expired ${result.count} quote(s)`
     });
   } catch (error) {
+    logger.error({ 
+      requestId, 
+      userId, 
+      organizationId,
+      operation: 'expire_old_quotes_error',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }, 'Failed to expire old quotes');
     res.status(500).json({
       success: false,
       message: 'Failed to expire quotes'
