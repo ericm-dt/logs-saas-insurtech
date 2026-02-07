@@ -213,6 +213,7 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
       organizationId,
       operation: 'quote.get.success',
       quote: {
+        id: quote.id,
         quoteNumber: quote.quoteNumber,
         type: quote.type,
         status: quote.status,
@@ -519,6 +520,7 @@ router.put(
           reason: statusChangeReason
         },
         quote: {
+          id: quoteId,
           quoteNumber: currentQuote.quoteNumber,
           type: currentQuote.type
         }
@@ -612,6 +614,7 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
       organizationId,
       operation: 'quote.delete.success',
       quote: {
+        id: quoteId,
         quoteNumber: quote.quoteNumber,
         type: quote.type,
         status: quote.status

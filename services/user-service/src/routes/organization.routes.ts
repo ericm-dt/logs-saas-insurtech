@@ -97,6 +97,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
       organizationId,
       operation: 'organization.get.success',
       organization: {
+        id: organizationId,
         name: organization.name,
         slug: organization.slug,
         plan: organization.plan,
@@ -164,6 +165,7 @@ router.get('/slug/:slug', async (req: Request, res: Response): Promise<void> => 
       organizationId: organization.id,
       operation: 'organization.get_by_slug.success',
       organization: {
+        id: organization.id,
         name: organization.name,
         plan: organization.plan,
         userCount: organization._count.users
@@ -248,6 +250,7 @@ router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
       organizationId,
       operation: 'organization.update.success',
       organization: {
+        id: organizationId,
         name: organization.name,
         slug: organization.slug,
         plan: organization.plan,

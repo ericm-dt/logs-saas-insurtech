@@ -221,6 +221,7 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
       organizationId,
       operation: 'policy.get.success',
       policy: {
+        id: policy.id,
         policyNumber: policy.policyNumber,
         type: policy.type,
         status: policy.status,
@@ -555,7 +556,8 @@ router.put(
           coverageChanged: coverageAmount !== undefined,
           endDateChanged: endDate !== undefined
         },
-        policySnapshot: {
+        policy: {
+          id: policyId,
           policyNumber: currentPolicy.policyNumber,
           type: currentPolicy.type,
           currentStatus: result.status
@@ -883,6 +885,7 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
       organizationId,
       operation: 'policy.delete.success',
       policy: {
+        id: policyId,
         policyNumber: policy.policyNumber,
         type: policy.type,
         status: policy.status

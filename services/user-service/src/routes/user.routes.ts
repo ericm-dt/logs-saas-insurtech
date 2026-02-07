@@ -110,6 +110,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
       userId,
       operation: 'user.get.success',
       user: {
+        id: userId,
         email: user.email,
         role: user.role,
         organizationId: user.organizationId
@@ -184,6 +185,7 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
       userId,
       operation: 'user.update.success',
       user: {
+        id: userId,
         email: user.email,
         role: user.role,
         organizationId: user.organizationId

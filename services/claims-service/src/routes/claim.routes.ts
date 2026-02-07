@@ -264,6 +264,7 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
       organizationId,
       operation: 'claim.get.success',
       claim: {
+        id: claim.id,
         claimNumber: claim.claimNumber,
         status: claim.status,
         claimAmount: claim.claimAmount,
@@ -674,6 +675,7 @@ router.put(
         claimAmount: currentClaim.claimAmount,
         operation: 'claim.update_status.success',
         claim: {
+          id: claimId,
           claimNumber: currentClaim.claimNumber,
           policyId: currentClaim.policyId
         },
@@ -832,6 +834,7 @@ router.post('/:id/approve', authenticate, param('id').isUUID(), validate([
         approvalRate: approvalRate + '%'
       },
       claim: {
+        id: claimId,
         claimNumber: currentClaim.claimNumber,
         policyId: currentClaim.policyId
       }
@@ -955,6 +958,7 @@ router.post('/:id/deny', authenticate, param('id').isUUID(), validate([
         reason
       },
       claim: {
+        id: claimId,
         claimNumber: currentClaim.claimNumber,
         policyId: currentClaim.policyId,
         claimAmount: currentClaim.claimAmount
@@ -1117,6 +1121,7 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
       organizationId,
       operation: 'claim.delete.success',
       claim: {
+        id: claimId,
         claimNumber: claim.claimNumber,
         status: claim.status,
         policyId: claim.policyId
