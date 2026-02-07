@@ -373,12 +373,10 @@ router.post(
     logger.info({ 
       requestId, 
       userId, 
-      organizationId, 
-      policyId, 
-      claimNumber, 
-      claimAmount,
+      organizationId,
       operation: 'claim.create',
-      claimData: {
+      claim: {
+        policyId,
         claimNumber,
         claimAmount,
         description: req.body.description?.substring(0, 100), // First 100 chars
@@ -501,10 +499,8 @@ router.post(
         requestId, 
         userId, 
         organizationId,
-        policyId,
-        claimNumber,
         operation: 'claim.create.error',
-        claimData: {
+        claim: {
           claimNumber,
           claimAmount,
           policyId

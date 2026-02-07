@@ -333,7 +333,7 @@ router.post(
       userId, 
       organizationId,
       operation: 'policy.create',
-      policyData: {
+      policy: {
         policyNumber, 
         type, 
         premium, 
@@ -412,7 +412,7 @@ router.post(
         userId, 
         organizationId,
         operation: 'policy.create.error',
-        policyData: {
+        policy: {
           policyNumber,
           type,
           premium,

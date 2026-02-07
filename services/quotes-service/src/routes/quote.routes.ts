@@ -321,12 +321,9 @@ router.post(
     logger.info({ 
       requestId, 
       userId, 
-      organizationId, 
-      quoteNumber, 
-      type, 
-      coverageAmount,
+      organizationId,
       operation: 'quote.create',
-      quoteData: {
+      quote: {
         quoteNumber,
         type,
         coverageAmount,
@@ -411,9 +408,8 @@ router.post(
         requestId, 
         userId, 
         organizationId,
-        quoteNumber,
         operation: 'quote.create.error',
-        quoteData: {
+        quote: {
           quoteNumber,
           type,
           coverageAmount
@@ -739,7 +735,7 @@ router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: Auth
       quoteId, 
       serviceUrl: POLICY_SERVICE_URL,
       operation: 'quote.convert_policy.calling_service',
-      policyData: {
+      policy: {
         type: quote.type,
         premium: quote.premium,
         coverageAmount: quote.coverageAmount
@@ -822,7 +818,7 @@ router.post('/:id/convert', authenticate, param('id').isUUID(), async (req: Auth
           responseStatus: (policyError as any).response?.status,
           stack: policyError instanceof Error ? policyError.stack : undefined
         },
-        quoteData: {
+        quote: {
           type: quote.type,
           premium: quote.premium,
           coverageAmount: quote.coverageAmount
