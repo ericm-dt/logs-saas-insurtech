@@ -279,8 +279,8 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
         id: claim.id,
         claimNumber: claim.claimNumber,
         status: claim.status,
-        claimAmount: claim.claimAmount,
-        approvedAmount: claim.approvedAmount,
+        claimAmount: Number(claim.claimAmount),
+        approvedAmount: claim.approvedAmount ? Number(claim.approvedAmount) : null,
         policyId: claim.policyId
       }
     }, 'Claim retrieved successfully');
@@ -400,7 +400,7 @@ router.post(
       claim: {
         policyId,
         claimNumber,
-        claimAmount,
+        claimAmount: Number(claimAmount),
         description: req.body.description?.substring(0, 100), // First 100 chars
         incidentDate: req.body.incidentDate
       },
@@ -637,7 +637,7 @@ router.put(
           claimId, 
           userId,
           operation: 'claim.update_status.approval_missing_amount',
-          claimAmount: currentClaim.claimAmount
+          claimAmount: Number(currentClaim.claimAmount)
         }, 'Claim approval rejected - approved amount is required');
         res.status(400).json({
           success: false,
@@ -701,8 +701,8 @@ router.put(
         },
         oldStatus: currentClaim.status, 
         newStatus: status,
-        approvedAmount,
-        claimAmount: currentClaim.claimAmount,
+        approvedAmount: approvedAmount ? Number(approvedAmount) : null,
+        claimAmount: Number(currentClaim.claimAmount),
         operation: 'claim.update_status.success',
         claim: {
           id: claimId,
@@ -1009,7 +1009,7 @@ router.post('/:id/deny', authenticate, param('id').isUUID(), validate([
         id: claimId,
         claimNumber: currentClaim.claimNumber,
         policyId: currentClaim.policyId,
-        claimAmount: currentClaim.claimAmount
+        claimAmount: Number(currentClaim.claimAmount)
       }
     }, 'Claim denied');
 

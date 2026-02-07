@@ -237,8 +237,8 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
         policyNumber: policy.policyNumber,
         type: policy.type,
         status: policy.status,
-        premium: policy.premium,
-        coverageAmount: policy.coverageAmount
+        premium: Number(policy.premium),
+        coverageAmount: Number(policy.coverageAmount)
       }
     }, 'Policy retrieved successfully');
 
@@ -358,8 +358,8 @@ router.post(
       policy: {
         policyNumber, 
         type, 
-        premium, 
-        coverageAmount,
+        premium: Number(premium), 
+        coverageAmount: Number(coverageAmount),
         status: req.body.status || 'PENDING',
         startDate: req.body.startDate,
         endDate: req.body.endDate
@@ -397,16 +397,16 @@ router.post(
           policyNumber, 
           type, 
           status: policy.status,
-          premium,
-          coverageAmount,
+          premium: Number(premium),
+          coverageAmount: Number(coverageAmount),
           startDate: policy.startDate,
           endDate: policy.endDate,
           createdAt: policy.createdAt
         },
         business: {
-          policyValue: coverageAmount,
-          annualPremium: premium,
-          coverageRatio: (coverageAmount / premium).toFixed(2)
+          policyValue: Number(coverageAmount),
+          annualPremium: Number(premium),
+          coverageRatio: (Number(coverageAmount) / Number(premium)).toFixed(2)
         }
       }, 'Policy created successfully for organization');
 
@@ -568,8 +568,8 @@ router.put(
             policyDetails: {
               policyNumber: currentPolicy.policyNumber,
               type: currentPolicy.type,
-              premium: currentPolicy.premium,
-              coverageAmount: currentPolicy.coverageAmount
+              premium: Number(currentPolicy.premium),
+              coverageAmount: Number(currentPolicy.coverageAmount)
             }
           }, 'Policy status changed successfully');
         }
