@@ -10,7 +10,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
   logger.info({ 
     requestId, 
-    operation: 'list_users',
+    operation: 'user.list',
     filters: req.query,
     ip: req.ip
   }, 'Fetching all users');
@@ -41,7 +41,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
     logger.info({ 
       requestId, 
-      operation: 'list_users_success',
+      operation: 'user.list.success',
       results: { count: users.length },
       performance: { queryDuration }
     }, `Fetched ${users.length} user(s)`);
@@ -50,7 +50,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     logger.error({ 
       requestId, 
-      operation: 'list_users_error',
+      operation: 'user.list.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
@@ -69,7 +69,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   logger.info({ 
     requestId, 
     userId,
-    operation: 'get_user_by_id',
+    operation: 'user.get',
     ip: req.ip
   }, 'Fetching user by ID');
 
@@ -99,7 +99,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
       logger.warn({ 
         requestId, 
         userId,
-        operation: 'get_user_not_found'
+        operation: 'user.get.not_found'
       }, 'User not found');
       res.status(404).json({ success: false, message: 'User not found' });
       return;
@@ -108,7 +108,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
     logger.info({ 
       requestId, 
       userId,
-      operation: 'get_user_success',
+      operation: 'user.get.success',
       user: {
         email: user.email,
         role: user.role,
@@ -121,7 +121,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
     logger.error({ 
       requestId, 
       userId,
-      operation: 'get_user_error',
+      operation: 'user.get.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
@@ -141,7 +141,7 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
   logger.info({ 
     requestId, 
     userId,
-    operation: 'update_user',
+    operation: 'user.update',
     updates: { firstName, lastName, phone, city, state, country },
     ip: req.ip
   }, 'Updating user profile');
@@ -182,7 +182,7 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
     logger.info({ 
       requestId, 
       userId,
-      operation: 'update_user_success',
+      operation: 'user.update.success',
       user: {
         email: user.email,
         role: user.role,
@@ -195,7 +195,7 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
     logger.error({ 
       requestId, 
       userId,
-      operation: 'update_user_error',
+      operation: 'user.update.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
@@ -214,7 +214,7 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
   logger.info({ 
     requestId, 
     userId,
-    operation: 'delete_user',
+    operation: 'user.delete',
     ip: req.ip
   }, 'Deleting user');
 
@@ -226,7 +226,7 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
     logger.info({ 
       requestId, 
       userId,
-      operation: 'delete_user_success'
+      operation: 'user.delete.success'
     }, 'User deleted successfully');
 
     res.json({ success: true, message: 'User deleted' });
@@ -234,7 +234,7 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
     logger.error({ 
       requestId, 
       userId,
-      operation: 'delete_user_error',
+      operation: 'user.delete.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined

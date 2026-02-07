@@ -35,7 +35,7 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
     requestId, 
     userId, 
     organizationId,
-    operation: 'list_policies',
+    operation: 'policy.list',
     filters: {
       status: req.query.status || 'all',
       type: req.query.type || 'all',
@@ -125,7 +125,7 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
       requestId, 
       userId, 
       organizationId,
-      operation: 'list_policies_success',
+      operation: 'policy.list.success',
       results: {
         count: policies.length,
         total,
@@ -160,7 +160,7 @@ router.get('/', authenticate, async (req: AuthRequest, res): Promise<void> => {
       requestId, 
       userId, 
       organizationId,
-      operation: 'list_policies_error',
+      operation: 'policy.list.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         name: error instanceof Error ? error.name : 'Error',
@@ -190,7 +190,7 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
     policyId, 
     userId, 
     organizationId,
-    operation: 'get_policy_by_id',
+    operation: 'policy.get',
     ip: req.ip
   }, 'Fetching policy by ID');
 
@@ -205,7 +205,7 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
         policyId, 
         userId, 
         organizationId,
-        operation: 'get_policy_not_found'
+        operation: 'policy.get.not_found'
       }, 'Policy not found by ID');
       res.status(404).json({
         success: false,
@@ -219,7 +219,7 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
       policyId: policy.id, 
       userId, 
       organizationId,
-      operation: 'get_policy_success',
+      operation: 'policy.get.success',
       policy: {
         policyNumber: policy.policyNumber,
         type: policy.type,
@@ -239,7 +239,7 @@ router.get('/:id', authenticate, param('id').isUUID(), async (req: AuthRequest, 
       policyId, 
       userId, 
       organizationId,
-      operation: 'get_policy_error',
+      operation: 'policy.get.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
@@ -264,7 +264,7 @@ router.get('/:id/history', authenticate, param('id').isUUID(), async (req: AuthR
     policyId, 
     userId, 
     organizationId,
-    operation: 'get_policy_history',
+    operation: 'policy.get_history',
     ip: req.ip
   }, 'Fetching policy status history');
 
@@ -279,7 +279,7 @@ router.get('/:id/history', authenticate, param('id').isUUID(), async (req: AuthR
       policyId, 
       userId, 
       organizationId,
-      operation: 'get_policy_history_success',
+      operation: 'policy.get_history.success',
       historyCount: history.length,
       hasChanges: history.length > 0
     }, 'Policy history retrieved successfully');
@@ -294,7 +294,7 @@ router.get('/:id/history', authenticate, param('id').isUUID(), async (req: AuthR
       policyId, 
       userId, 
       organizationId,
-      operation: 'get_policy_history_error',
+      operation: 'policy.get_history.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
@@ -331,7 +331,7 @@ router.post(
       requestId, 
       userId, 
       organizationId,
-      operation: 'create_policy',
+      operation: 'policy.create',
       policyData: {
         policyNumber, 
         type, 
@@ -366,7 +366,7 @@ router.post(
         policyId: policy.id, 
         userId, 
         organizationId,
-        operation: 'create_policy_success',
+        operation: 'policy.create.success',
         policy: {
           id: policy.id,
           policyNumber, 
@@ -395,7 +395,7 @@ router.post(
           requestId, 
           userId, 
           organizationId,
-          operation: 'create_policy_duplicate',
+          operation: 'policy.create.duplicate',
           policyNumber,
           attemptedType: type,
           errorCode: error.code
@@ -410,7 +410,7 @@ router.post(
         requestId, 
         userId, 
         organizationId,
-        operation: 'create_policy_error',
+        operation: 'policy.create.error',
         policyData: {
           policyNumber,
           type,
@@ -448,7 +448,7 @@ router.put(
       policyId, 
       userId, 
       organizationId,
-      operation: 'update_policy',
+      operation: 'policy.update',
       updates: { 
         status, 
         premium, 
@@ -477,7 +477,7 @@ router.put(
           policyId, 
           userId, 
           organizationId,
-          operation: 'update_policy_not_found',
+          operation: 'policy.update.not_found',
           attemptedUpdates: { status, premium, coverageAmount }
         }, 'Policy update failed - policy not found in organization');
         res.status(404).json({
@@ -523,7 +523,7 @@ router.put(
             policyId, 
             userId,
             organizationId: currentPolicy.organizationId,
-            operation: 'policy_status_transition',
+            operation: 'policy.update.status_transition',
             transition: {
               from: currentPolicy.status, 
               to: status,
@@ -547,7 +547,7 @@ router.put(
         policyId, 
         userId, 
         organizationId,
-        operation: 'update_policy_success',
+        operation: 'policy.update.success',
         changes: {
           statusChanged: status && status !== currentPolicy.status,
           newStatus: status,
@@ -573,7 +573,7 @@ router.put(
           policyId, 
           userId,
           organizationId,
-          operation: 'update_policy_not_found_transaction',
+          operation: 'policy.update.not_found_transaction',
           errorCode: error.code
         }, 'Policy update failed - policy not found during transaction');
         res.status(404).json({
@@ -587,7 +587,7 @@ router.put(
         policyId, 
         userId,
         organizationId,
-        operation: 'update_policy_error',
+        operation: 'policy.update.error',
         attemptedChanges: { status, premium, coverageAmount, endDate: !!endDate },
         error: {
           message: error instanceof Error ? error.message : 'Unknown error',
@@ -621,7 +621,7 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
     policyId, 
     userId, 
     organizationId,
-    operation: 'file_claim_from_policy',
+    operation: 'policy.file_claim',
     claimAmount,
     incidentDate,
     ip: req.ip
@@ -638,7 +638,7 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
         policyId, 
         userId, 
         organizationId,
-        operation: 'file_claim_policy_not_found'
+        operation: 'policy.file_claim.not_found'
       }, 'Cannot file claim - policy not found');
       res.status(404).json({
         success: false,
@@ -654,7 +654,7 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
         userId, 
         organizationId,
         policyStatus: policy.status,
-        operation: 'file_claim_policy_inactive'
+        operation: 'policy.file_claim.policy_inactive'
       }, 'Cannot file claim - policy is not active');
       res.status(400).json({
         success: false,
@@ -673,7 +673,7 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
       policyId, 
       claimNumber,
       serviceUrl: CLAIMS_SERVICE_URL,
-      operation: 'file_claim_calling_claims_service'
+      operation: 'policy.file_claim.calling_service'
     }, 'Calling claims service to create claim');
 
     try {
@@ -699,7 +699,7 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
         claimNumber,
         userId, 
         organizationId,
-        operation: 'file_claim_success',
+        operation: 'policy.file_claim.success',
         claimAmount,
         performance: {
           claimsServiceDuration: duration
@@ -719,7 +719,7 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
         organizationId,
         claimNumber,
         serviceUrl: CLAIMS_SERVICE_URL,
-        operation: 'file_claim_service_error',
+        operation: 'policy.file_claim.service_error',
         error: {
           message: claimError instanceof Error ? claimError.message : 'Unknown error',
           isAxiosError: (claimError as any).isAxiosError,
@@ -737,7 +737,7 @@ router.post('/:id/file-claim', authenticate, param('id').isUUID(), validate([
       policyId, 
       userId, 
       organizationId,
-      operation: 'file_claim_error',
+      operation: 'policy.file_claim.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
@@ -760,7 +760,7 @@ router.get('/my/policies', authenticate, async (req: AuthRequest, res): Promise<
     requestId, 
     userId, 
     organizationId,
-    operation: 'get_my_policies',
+    operation: 'policy.list_my',
     filters: req.query,
     ip: req.ip
   }, 'Fetching user-scoped policies');
@@ -795,7 +795,7 @@ router.get('/my/policies', authenticate, async (req: AuthRequest, res): Promise<
       requestId, 
       userId, 
       organizationId,
-      operation: 'get_my_policies_success',
+      operation: 'policy.list_my.success',
       results: {
         count: policies.length,
         total,
@@ -822,7 +822,7 @@ router.get('/my/policies', authenticate, async (req: AuthRequest, res): Promise<
       requestId, 
       userId, 
       organizationId,
-      operation: 'get_my_policies_error',
+      operation: 'policy.list_my.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
@@ -847,7 +847,7 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
     policyId, 
     userId, 
     organizationId,
-    operation: 'delete_policy',
+    operation: 'policy.delete',
     ip: req.ip
   }, 'Deleting policy');
 
@@ -863,7 +863,7 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
         policyId, 
         userId, 
         organizationId,
-        operation: 'delete_policy_not_found'
+        operation: 'policy.delete.not_found'
       }, 'Policy deletion failed - policy not found');
       res.status(404).json({
         success: false,
@@ -881,7 +881,7 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
       policyId, 
       userId, 
       organizationId,
-      operation: 'delete_policy_success',
+      operation: 'policy.delete.success',
       policy: {
         policyNumber: policy.policyNumber,
         type: policy.type,
@@ -900,7 +900,7 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
         policyId, 
         userId, 
         organizationId,
-        operation: 'delete_policy_not_found',
+        operation: 'policy.delete.not_found',
         errorCode: error.code
       }, 'Policy deletion failed - policy not found');
       res.status(404).json({
@@ -914,7 +914,7 @@ router.delete('/:id', authenticate, param('id').isUUID(), async (req: AuthReques
       policyId, 
       userId, 
       organizationId,
-      operation: 'delete_policy_error',
+      operation: 'policy.delete.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined

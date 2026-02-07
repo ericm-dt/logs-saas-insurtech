@@ -14,7 +14,7 @@ router.post('/organizations', async (req: Request, res: Response) => {
     slug, 
     plan, 
     organizationName: name,
-    operation: 'create_organization',
+    operation: 'organization.create',
     ip: req.ip,
     userAgent: req.get('user-agent')
   }, 'Organization creation requested');
@@ -28,7 +28,7 @@ router.post('/organizations', async (req: Request, res: Response) => {
         slug, 
         existingOrgId: existing.id,
         existingOrgName: existing.name,
-        operation: 'create_organization_duplicate',
+        operation: 'organization.create.duplicate',
         attemptedName: name,
         ip: req.ip
       }, 'Organization creation failed - slug already exists in system');
@@ -47,7 +47,7 @@ router.post('/organizations', async (req: Request, res: Response) => {
       plan,
       organizationName: organization.name,
       createdAt: organization.createdAt,
-      operation: 'create_organization_success',
+      operation: 'organization.create.success',
       organization: {
         id: organization.id,
         name: organization.name,
@@ -64,7 +64,7 @@ router.post('/organizations', async (req: Request, res: Response) => {
       requestId, 
       slug, 
       attemptedName: name,
-      operation: 'create_organization_error',
+      operation: 'organization.create.error',
       error: {
         message: message,
         stack: error instanceof Error ? error.stack : undefined
@@ -85,7 +85,7 @@ router.post('/register', async (req: Request, res: Response) => {
     organizationId, 
     role, 
     orgRole,
-    operation: 'register_user',
+    operation: 'user.register',
     userDetails: {
       email,
       firstName,
@@ -119,7 +119,7 @@ router.post('/register', async (req: Request, res: Response) => {
       orgRole,
       duration,
       hasToken: !!result.token,
-      operation: 'register_user_success',
+      operation: 'user.register.success',
       user: {
         id: result.user.id,
         email,
@@ -143,7 +143,7 @@ router.post('/register', async (req: Request, res: Response) => {
       email, 
       organizationId, 
       attemptedRole: role,
-      operation: 'register_user_error',
+      operation: 'user.register.error',
       error: {
         message: message,
         stack: error instanceof Error ? error.stack : undefined
@@ -161,7 +161,7 @@ router.post('/login', async (req: Request, res: Response) => {
   logger.info({ 
     requestId, 
     email, 
-    operation: 'login_attempt',
+    operation: 'auth.login.attempt',
     ip: req.ip, 
     userAgent: req.get('user-agent')
   }, 'User login attempt initiated');
@@ -180,7 +180,7 @@ router.post('/login', async (req: Request, res: Response) => {
       orgRole: result.user.orgRole,
       duration,
       ip: req.ip,
-      operation: 'login_success',
+      operation: 'auth.login.success',
       user: {
         id: result.user.id,
         email,
@@ -207,7 +207,7 @@ router.post('/login', async (req: Request, res: Response) => {
       reason: message, 
       ip: req.ip,
       userAgent: req.get('user-agent'),
-      operation: 'login_failed',
+      operation: 'auth.login.failed',
       failureType: message.includes('Invalid') ? 'invalid_credentials' : 'other'
     }, 'User login failed - authentication rejected');
     res.status(401).json({ success: false, message });
@@ -226,7 +226,7 @@ router.post('/verify', async (req: Request, res: Response) => {
       userId: payload.userId, 
       email: payload.email,
       organizationId: payload.organizationId,
-      operation: 'verify_token_success',
+      operation: 'auth.verify_token.success',
       tokenPayload: {
         userId: payload.userId,
         email: payload.email,
@@ -241,7 +241,7 @@ router.post('/verify', async (req: Request, res: Response) => {
     logger.warn({ 
       requestId, 
       reason: error instanceof Error ? error.message : 'Invalid token', 
-      operation: 'verify_token_failed',
+      operation: 'auth.verify_token.failed',
       errorType: error instanceof Error ? error.name : 'TokenError',
       ip: req.ip
     }, 'JWT token verification failed - invalid or expired token');
@@ -257,7 +257,7 @@ router.get('/me', async (req: Request, res: Response) => {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       logger.warn({ 
         requestId, 
-        operation: 'get_current_user_no_token',
+        operation: 'user.get_current.no_token',
         endpoint: '/auth/me',
         ip: req.ip
       }, 'Get current user failed - no authentication token provided');
@@ -295,7 +295,7 @@ router.get('/me', async (req: Request, res: Response) => {
         requestId, 
         userId: payload.userId, 
         email: payload.email,
-        operation: 'get_current_user_not_found',
+        operation: 'user.get_current.not_found',
         issue: 'valid_token_but_user_deleted',
         ip: req.ip
       }, 'INCONSISTENCY - User not found for valid JWT token (possible data integrity issue)');
@@ -308,7 +308,7 @@ router.get('/me', async (req: Request, res: Response) => {
       userId: user.id, 
       email: user.email, 
       organizationId: user.organizationId,
-      operation: 'get_current_user_success',
+      operation: 'user.get_current.success',
       user: {
         id: user.id,
         email: user.email,
@@ -322,7 +322,7 @@ router.get('/me', async (req: Request, res: Response) => {
     logger.warn({ 
       requestId, 
       error: error instanceof Error ? error.message : 'Invalid token', 
-      operation: 'get_current_user_invalid_token',
+      operation: 'user.get_current.invalid_token',
       errorType: error instanceof Error ? error.name : 'TokenError',
       ip: req.ip
     }, 'Get current user failed - JWT token is invalid or expired');

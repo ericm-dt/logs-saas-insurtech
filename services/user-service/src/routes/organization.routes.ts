@@ -10,7 +10,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
   logger.info({ 
     requestId, 
-    operation: 'list_organizations',
+    operation: 'organization.list',
     ip: req.ip
   }, 'Fetching all organizations');
 
@@ -34,7 +34,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
     logger.info({ 
       requestId, 
-      operation: 'list_organizations_success',
+      operation: 'organization.list.success',
       results: { count: organizations.length },
       performance: { queryDuration }
     }, `Fetched ${organizations.length} organization(s)`);
@@ -43,7 +43,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     logger.error({ 
       requestId, 
-      operation: 'list_organizations_error',
+      operation: 'organization.list.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
@@ -62,7 +62,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   logger.info({ 
     requestId, 
     organizationId,
-    operation: 'get_organization_by_id',
+    operation: 'organization.get',
     ip: req.ip
   }, 'Fetching organization by ID');
 
@@ -86,7 +86,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
       logger.warn({ 
         requestId, 
         organizationId,
-        operation: 'get_organization_not_found'
+        operation: 'organization.get.not_found'
       }, 'Organization not found');
       res.status(404).json({ success: false, message: 'Organization not found' });
       return;
@@ -95,7 +95,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
     logger.info({ 
       requestId, 
       organizationId,
-      operation: 'get_organization_success',
+      operation: 'organization.get.success',
       organization: {
         name: organization.name,
         slug: organization.slug,
@@ -109,7 +109,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
     logger.error({ 
       requestId, 
       organizationId,
-      operation: 'get_organization_error',
+      operation: 'organization.get.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
@@ -128,7 +128,7 @@ router.get('/slug/:slug', async (req: Request, res: Response): Promise<void> => 
   logger.info({ 
     requestId, 
     slug,
-    operation: 'get_organization_by_slug',
+    operation: 'organization.get_by_slug',
     ip: req.ip
   }, 'Fetching organization by slug');
 
@@ -152,7 +152,7 @@ router.get('/slug/:slug', async (req: Request, res: Response): Promise<void> => 
       logger.warn({ 
         requestId, 
         slug,
-        operation: 'get_organization_by_slug_not_found'
+        operation: 'organization.get_by_slug.not_found'
       }, 'Organization not found by slug');
       res.status(404).json({ success: false, message: 'Organization not found' });
       return;
@@ -162,7 +162,7 @@ router.get('/slug/:slug', async (req: Request, res: Response): Promise<void> => 
       requestId, 
       slug,
       organizationId: organization.id,
-      operation: 'get_organization_by_slug_success',
+      operation: 'organization.get_by_slug.success',
       organization: {
         name: organization.name,
         plan: organization.plan,
@@ -175,7 +175,7 @@ router.get('/slug/:slug', async (req: Request, res: Response): Promise<void> => 
     logger.error({ 
       requestId, 
       slug,
-      operation: 'get_organization_by_slug_error',
+      operation: 'organization.get_by_slug.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
@@ -195,7 +195,7 @@ router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
   logger.info({ 
     requestId, 
     organizationId,
-    operation: 'update_organization',
+    operation: 'organization.update',
     updates: { name, slug, plan },
     ip: req.ip
   }, 'Updating organization');
@@ -215,7 +215,7 @@ router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
           requestId, 
           organizationId,
           slug,
-          operation: 'update_organization_slug_conflict',
+          operation: 'organization.update.slug_conflict',
           conflictingOrgId: existing.id
         }, 'Organization slug already exists');
         res.status(400).json({ success: false, message: 'Organization slug already exists' });
@@ -246,7 +246,7 @@ router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
     logger.info({ 
       requestId, 
       organizationId,
-      operation: 'update_organization_success',
+      operation: 'organization.update.success',
       organization: {
         name: organization.name,
         slug: organization.slug,
@@ -260,7 +260,7 @@ router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
     logger.error({ 
       requestId, 
       organizationId,
-      operation: 'update_organization_error',
+      operation: 'organization.update.error',
       updates: { name, slug, plan },
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -280,7 +280,7 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
   logger.info({ 
     requestId, 
     organizationId,
-    operation: 'delete_organization',
+    operation: 'organization.delete',
     ip: req.ip
   }, 'Attempting to delete organization');
 
@@ -294,7 +294,7 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
       logger.warn({ 
         requestId, 
         organizationId,
-        operation: 'delete_organization_has_users',
+        operation: 'organization.delete.has_users',
         userCount
       }, `Cannot delete organization with ${userCount} user(s)`);
       res.status(400).json({ 
@@ -311,7 +311,7 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
     logger.info({ 
       requestId, 
       organizationId,
-      operation: 'delete_organization_success'
+      operation: 'organization.delete.success'
     }, 'Organization deleted successfully');
 
     res.json({ success: true, message: 'Organization deleted' });
@@ -319,7 +319,7 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
     logger.error({ 
       requestId, 
       organizationId,
-      operation: 'delete_organization_error',
+      operation: 'organization.delete.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
@@ -338,7 +338,7 @@ router.get('/:id/users', async (req: Request, res: Response): Promise<void> => {
   logger.info({ 
     requestId, 
     organizationId,
-    operation: 'get_organization_users',
+    operation: 'organization.list_users',
     ip: req.ip
   }, 'Fetching organization users');
 
@@ -363,7 +363,7 @@ router.get('/:id/users', async (req: Request, res: Response): Promise<void> => {
     logger.info({ 
       requestId, 
       organizationId,
-      operation: 'get_organization_users_success',
+      operation: 'organization.list_users.success',
       results: { count: users.length },
       performance: { queryDuration }
     }, `Fetched ${users.length} user(s) for organization`);
@@ -373,7 +373,7 @@ router.get('/:id/users', async (req: Request, res: Response): Promise<void> => {
     logger.error({ 
       requestId, 
       organizationId,
-      operation: 'get_organization_users_error',
+      operation: 'organization.list_users.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
@@ -392,7 +392,7 @@ router.get('/:id/stats', async (req: Request, res: Response): Promise<void> => {
   logger.info({ 
     requestId, 
     organizationId,
-    operation: 'get_organization_stats',
+    operation: 'organization.get_stats',
     ip: req.ip
   }, 'Fetching organization statistics');
 
@@ -424,7 +424,7 @@ router.get('/:id/stats', async (req: Request, res: Response): Promise<void> => {
       logger.warn({ 
         requestId, 
         organizationId,
-        operation: 'get_organization_stats_not_found'
+        operation: 'organization.get_stats.not_found'
       }, 'Organization not found for stats');
       res.status(404).json({ success: false, message: 'Organization not found' });
       return;
@@ -448,7 +448,7 @@ router.get('/:id/stats', async (req: Request, res: Response): Promise<void> => {
     logger.info({ 
       requestId, 
       organizationId,
-      operation: 'get_organization_stats_success',
+      operation: 'organization.get_stats.success',
       stats: {
         totalUsers: stats.totalUsers,
         usersByRole: stats.usersByRole,
@@ -462,7 +462,7 @@ router.get('/:id/stats', async (req: Request, res: Response): Promise<void> => {
     logger.error({ 
       requestId, 
       organizationId,
-      operation: 'get_organization_stats_error',
+      operation: 'organization.get_stats.error',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
