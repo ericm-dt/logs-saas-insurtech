@@ -176,10 +176,23 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
             # Agent reviews documentation, checks policy terms, analyzes photos/evidence (8-15 seconds)
             time.sleep(random.uniform(8, 15) * self.user_speed_factor)
         
-        # Step 3: Approve or deny the claim (80% approval rate)
-        if random.random() < 0.8:
+        # Step 3: Approve or deny the claim
+        # Denial rate varies by claim amount (higher amounts = more scrutiny)
+        claim_amount = float(claim.get('claimAmount', 5000))
+        
+        # Base denial rate: 15%, increases for higher amounts
+        # Under $5k: 10% denial, $5k-$20k: 15%, $20k-$50k: 25%, Over $50k: 35%
+        if claim_amount < 5000:
+            denial_rate = 0.10
+        elif claim_amount < 20000:
+            denial_rate = 0.15
+        elif claim_amount < 50000:
+            denial_rate = 0.25
+        else:
+            denial_rate = 0.35
+        
+        if random.random() > denial_rate:
             # Approve claim with approved amount
-            claim_amount = float(claim.get('claimAmount', 5000))
             approved_amount = round(claim_amount * random.uniform(0.8, 1.0), 2)
             with self.client.put(
                 f"/api/v1/claims/{claim_id}/status",
@@ -199,19 +212,38 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
                 else:
                     response.failure(f"Unexpected status code: {response.status_code}")
         else:
-            # Deny claim with reason
-            denial_reasons = [
-                "Insufficient documentation provided",
-                "Claim exceeds policy coverage limits",
-                "Incident not covered under policy terms",
-                "Duplicate claim submission",
-                "Policy was not active at time of incident"
+            # Deny claim with realistic reason
+            # Weighted denial reasons - more common reasons appear more frequently
+            # Static strings for aggregation in reporting
+            denial_scenarios = [
+                # Common reasons (60% of denials)
+                ("Insufficient documentation provided", 0.20),
+                ("Missing required evidence or photos", 0.15),
+                ("Policy coverage limits exceeded", 0.15),
+                ("Lack of supporting receipts or repair estimates", 0.10),
+                
+                # Moderate reasons (30% of denials)
+                ("Incident not covered under policy terms", 0.12),
+                ("Pre-existing damage identified in assessment", 0.08),
+                ("Claim filed outside policy reporting window", 0.07),
+                ("Unable to verify incident details provided", 0.03),
+                
+                # Rare reasons (10% of denials)
+                ("Duplicate claim submission detected", 0.04),
+                ("Policy was not active at time of incident", 0.03),
+                ("Fraudulent claim indicators identified", 0.02),
+                ("Third-party liability determined at fault", 0.01)
             ]
+            
+            # Select reason using weighted probabilities
+            reasons, weights = zip(*denial_scenarios)
+            selected_reason = random.choices(reasons, weights=weights)[0]
+            
             with self.client.put(
                 f"/api/v1/claims/{claim_id}/status",
                 json={
                     "status": "DENIED",
-                    "denialReason": random.choice(denial_reasons)
+                    "denialReason": selected_reason
                 },
                 headers=headers,
                 catch_response=True,
