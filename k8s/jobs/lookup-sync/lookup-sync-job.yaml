@@ -1,0 +1,62 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dynatrace-lookup-sync
+  namespace: dynaclaimz
+spec:
+  # Auto-cleanup: Job and Pods deleted 2 hours after completion/failure
+  # Gives enough time to check logs, then removes clutter automatically
+  ttlSecondsAfterFinished: 7200
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: dynatrace-lookup-sync
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: lookup-sync
+        image: python:3.11-slim
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            set -e
+            
+            echo "Installing dependencies..."
+            pip install --no-cache-dir psycopg2-binary requests
+            
+            echo "Starting lookup data sync..."
+            python3 /scripts/sync_lookups.py
+            
+            echo "Lookup sync completed successfully!"
+        
+        env:
+        # Database connections
+        - name: USER_DB_URL
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: USER_DB_URL
+        
+        # Dynatrace configuration
+        - name: DYNATRACE_URL
+          valueFrom:
+            secretKeyRef:
+              name: dynatrace-secrets
+              key: DYNATRACE_URL
+        - name: DYNATRACE_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: dynatrace-secrets
+              key: DYNATRACE_API_TOKEN
+        
+        volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+          readOnly: true
+      
+      volumes:
+      - name: scripts
+        configMap:
+          name: lookup-sync-script
+          defaultMode: 0755
