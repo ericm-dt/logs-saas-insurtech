@@ -1,6 +1,6 @@
 # Manual database seeding job
 # Only run this manually when you want to seed the database
-# kubectl apply -f k8s/db-seed-job.yaml
+# kubectl apply -f k8s/jobs/database/db-seed-job.yaml
 # 
 # WARNING: This will insert sample data. Only use in dev/staging!
 # Delete after running: kubectl delete job db-seed -n dynaclaimz

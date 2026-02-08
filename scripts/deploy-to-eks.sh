@@ -115,7 +115,7 @@ kubectl wait --for=condition=available --timeout=300s \
 
 # Run database migrations
 log_info "Running database migrations..."
-kubectl apply -f "$PROJECT_ROOT/k8s/db-init-job.yaml"
+kubectl apply -f "$PROJECT_ROOT/k8s/jobs/database/db-init-job.yaml"
 kubectl wait --for=condition=complete --timeout=300s job/db-init -n dynaclaimz || log_warn "DB init job may need manual intervention"
 
 # Deploy ingress

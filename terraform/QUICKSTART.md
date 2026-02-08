@@ -81,7 +81,7 @@ kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/secrets.yaml
 kubectl apply -f k8s/services/
 kubectl apply -f k8s/deployments/
-kubectl apply -f k8s/db-init-job.yaml
+kubectl apply -f k8s/jobs/database/db-init-job.yaml
 kubectl apply -f k8s/ingress.yaml
 ```
 
