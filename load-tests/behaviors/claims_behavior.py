@@ -145,19 +145,33 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
             
             claim = claims[0]
             claim_id = claim['id']
+            claim_status = claim.get('status')
             response.success()
+        
+        # Skip if claim is already in final state (prevents workflow violations)
+        if claim_status in ['APPROVED', 'DENIED', 'PAID']:
+            # Agent notes claim is already processed
+            return
         
         # Agent opens and reads claim details thoroughly (5-10 seconds)
         time.sleep(random.uniform(5, 10) * self.user_speed_factor)
         
         # Step 2: Update to under_review (if not already)
-        if status_to_find == 'SUBMITTED':
-            self.client.put(
+        if claim_status == 'SUBMITTED':
+            with self.client.put(
                 f"/api/v1/claims/{claim_id}/status",
                 json={"status": "UNDER_REVIEW"},
                 headers=headers,
+                catch_response=True,
                 name="2. Mark Under Review"
-            )
+            ) as response:
+                if response.status_code == 200:
+                    response.success()
+                elif response.status_code == 400:
+                    # Another agent already updated this - not a real failure
+                    response.success()
+                else:
+                    response.failure(f"Unexpected status code: {response.status_code}")
             
             # Agent reviews documentation, checks policy terms, analyzes photos/evidence (8-15 seconds)
             time.sleep(random.uniform(8, 15) * self.user_speed_factor)
@@ -167,15 +181,23 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
             # Approve claim with approved amount
             claim_amount = float(claim.get('claimAmount', 5000))
             approved_amount = round(claim_amount * random.uniform(0.8, 1.0), 2)
-            self.client.put(
+            with self.client.put(
                 f"/api/v1/claims/{claim_id}/status",
                 json={
                     "status": "APPROVED",
                     "approvedAmount": approved_amount
                 },
                 headers=headers,
+                catch_response=True,
                 name="3. Approved Claim"
-            )
+            ) as response:
+                if response.status_code == 200:
+                    response.success()
+                elif response.status_code == 400:
+                    # Another agent already processed this claim - not a real failure
+                    response.success()
+                else:
+                    response.failure(f"Unexpected status code: {response.status_code}")
         else:
             # Deny claim with reason
             denial_reasons = [
@@ -185,15 +207,23 @@ class ClaimsManagementBehavior(BaseAgentBehavior):
                 "Duplicate claim submission",
                 "Policy was not active at time of incident"
             ]
-            self.client.put(
+            with self.client.put(
                 f"/api/v1/claims/{claim_id}/status",
                 json={
                     "status": "DENIED",
                     "denialReason": random.choice(denial_reasons)
                 },
                 headers=headers,
+                catch_response=True,
                 name="3. Denied Claim"
-            )
+            ) as response:
+                if response.status_code == 200:
+                    response.success()
+                elif response.status_code == 400:
+                    # Another agent already processed this claim - not a real failure
+                    response.success()
+                else:
+                    response.failure(f"Unexpected status code: {response.status_code}")
         
         # Agent writes notes and prepares communication to customer (2-4 seconds)
         time.sleep(random.uniform(2, 4) * self.user_speed_factor)

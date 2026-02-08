@@ -49,6 +49,50 @@ This modular structure provides:
 - **Decorator Pattern**: Clean @with_rotation decorator for automatic user rotation
 - **Comprehensive Coverage**: Tests all major API endpoints
 
+## Building and Deploying
+
+### Build and Push to ECR
+
+Use the provided script to build and push the Locust Docker image:
+
+```bash
+cd load-tests
+
+# Build and push (auto-detects AWS account ID)
+./build-and-push.sh
+
+# With custom region
+./build-and-push.sh us-west-2
+
+# Build, push, and restart Kubernetes deployment
+./build-and-push.sh us-east-1 --restart
+
+# Specify all parameters
+./build-and-push.sh us-east-1 446130280781 --restart
+```
+
+**Script features:**
+- Auto-detects AWS account ID if not provided
+- Builds for `linux/amd64` (EKS compatibility)
+- Tags with both `latest` and git commit SHA
+- Pushes to ECR repository: `dynaclaimz/locust`
+- Optional `--restart` flag to automatically restart Kubernetes deployment
+- Color-coded output for easy monitoring
+- Validates kubectl availability before attempting restart
+
+**Manual deployment steps:**
+```bash
+# After pushing image
+kubectl rollout restart deployment -n load-testing
+
+# Check rollout status
+kubectl rollout status deployment/locust-master -n load-testing
+kubectl rollout status deployment/locust-worker -n load-testing
+
+# View pods
+kubectl get pods -n load-testing
+```
+
 ## Running Load Tests
 
 ### Using Docker Compose
