@@ -575,10 +575,11 @@ router.put(
       transition: {
         newStatus: status, 
         approvedAmount, 
+        denialReason: status === 'DENIED' ? denialReason : undefined,
         hasDenialReason: !!denialReason
       },
       ip: req.ip
-    }, 'Updating claim status - workflow transition');
+    }, status === 'DENIED' ? `Updating claim status to DENIED - Reason: ${denialReason}` : 'Updating claim status - workflow transition');
     
     try {
       // Business logic: validate status transitions
@@ -703,6 +704,7 @@ router.put(
         newStatus: status,
         approvedAmount: approvedAmount ? Number(approvedAmount) : null,
         claimAmount: Number(currentClaim.claimAmount),
+        denialReason: status === 'DENIED' ? denialReason : undefined,
         operation: 'claim.update_status.success',
         claim: {
           id: claimId,
@@ -720,7 +722,7 @@ router.put(
           approved: approvedAmount || null,
           approvalRate: approvedAmount ? ((approvedAmount / Number(currentClaim.claimAmount)) * 100).toFixed(2) + '%' : null
         }
-      }, 'Claim status updated successfully');
+      }, status === 'DENIED' ? `Claim denied - Reason: ${denialReason}` : 'Claim status updated successfully');
 
       res.json({
         success: true,
@@ -923,9 +925,9 @@ router.post('/:id/deny', authenticate, param('id').isUUID(), validate([
       organizationId
     },
     operation: 'claim.deny',
-    reason,
+    denialReason: reason,
     ip: req.ip
-  }, 'Denying claim');
+  }, `Denying claim - Reason: ${reason}`);
 
   try {
     const currentClaim = await prisma.claim.findUnique({
@@ -999,6 +1001,7 @@ router.post('/:id/deny', authenticate, param('id').isUUID(), validate([
         organizationId
       },
       operation: 'claim.deny.success',
+      denialReason: reason,
       workflow: {
         from: currentClaim.status,
         to: 'DENIED',
@@ -1011,7 +1014,7 @@ router.post('/:id/deny', authenticate, param('id').isUUID(), validate([
         policyId: currentClaim.policyId,
         claimAmount: Number(currentClaim.claimAmount)
       }
-    }, 'Claim denied');
+    }, `Claim ${currentClaim.claimNumber} denied - Reason: ${reason}`);
 
     res.json({
       success: true,
