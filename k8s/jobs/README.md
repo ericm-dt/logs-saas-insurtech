@@ -4,6 +4,23 @@ This directory contains one-time and scheduled jobs that run in the DynaClaimz K
 
 ## Available Jobs
 
+### [database](./database/)
+Database initialization and seeding jobs for setting up PostgreSQL schemas and sample data.
+
+**What it does:**
+- `db-init-job.yaml`: Runs Prisma migrations to initialize database schemas
+- `db-seed-job.yaml`: Seeds databases with sample data (dev/staging only)
+
+**Run manually:**
+```bash
+# Initialize databases
+kubectl apply -f database/db-init-job.yaml
+kubectl wait --for=condition=complete --timeout=300s job/db-init -n dynaclaimz
+
+# Seed with sample data (optional)
+kubectl apply -f database/db-seed-job.yaml
+```
+
 ### [lookup-sync](./lookup-sync/)
 Exports user and organization data from PostgreSQL to Dynatrace Grail as lookup tables. This enables enriching observability data with business context in DQL queries.
 

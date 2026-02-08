@@ -152,7 +152,7 @@ profiles:
     - k8s/secrets.yaml
     - k8s/services/*.yaml
     - k8s/deployments/*.yaml
-    - k8s/db-init-job.yaml
+    - k8s/jobs/database/db-init-job.yaml
 
   deploy:
     kubectl:
@@ -218,7 +218,7 @@ profiles:
     - k8s/secrets.yaml
     - k8s/services/*.yaml
     - k8s/deployments/*.yaml
-    - k8s/db-init-job.yaml
+    - k8s/jobs/database/db-init-job.yaml
 
   deploy:
     kubectl:
@@ -291,7 +291,7 @@ profiles:
     - k8s/secrets.yaml
     - k8s/services/*.yaml
     - k8s/deployments/*.yaml
-    - k8s/db-init-job.yaml
+    - k8s/jobs/database/db-init-job.yaml
 
   deploy:
     kubectl:
