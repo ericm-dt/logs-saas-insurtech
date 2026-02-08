@@ -170,8 +170,11 @@ class QuoteManagementBehavior(BaseAgentBehavior):
                     headers=headers,
                     name="3. View New Policy"
                 )
+            elif response.status_code in [400, 409]:
+                # Another agent already converted this quote - not a real failure
+                response.success()
             else:
-                response.failure(f"Conversion failed: {response.status_code}")
+                response.failure(f"Unexpected status code: {response.status_code}")
     
     @task(3)
     @with_rotation
